@@ -20,9 +20,9 @@
 #' @export
 #'
 #' @examples
-#' \donttest{
-#' # set a persistent cache directory
-#' set_cache_dir("~/educabR_cache")
+#' \dontrun{
+#' # set a custom cache directory (use tempdir() in examples)
+#' set_cache_dir(file.path(tempdir(), "educabR_cache"))
 #' }
 set_cache_dir <- function(path = NULL, persistent = FALSE) {
   if (is.null(path)) {
@@ -101,7 +101,7 @@ get_cache_dir <- function() {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # clear all cached data
 #' clear_cache()
 #'
@@ -146,7 +146,7 @@ clear_cache <- function(dataset = NULL) {
 #' @export
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' list_cache()
 #' }
 list_cache <- function(dataset = NULL) {
