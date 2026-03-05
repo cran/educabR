@@ -1,3 +1,12 @@
+# educabR 0.1.3
+
+## Correcoes
+
+* Corrigidos dois usos de `~/educabR_data` na vinheta (`introducao-educabr.Rmd`)
+  que criavam diretorio no home do usuario durante verificacoes CRAN com `--run-donttest`.
+  O primeiro estava na secao "Configurando o Cache" e o segundo em "Boas Praticas".
+  Ambos substituidos por `tempdir()` ou comentados com instrucao de uso de caminho absoluto.
+
 # educabR 0.1.1
 
 ## Correcoes

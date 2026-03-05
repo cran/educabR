@@ -362,16 +362,16 @@ Escolar</strong> - Censo da Educação Básica</p>
 <p>O educabR faz cache dos arquivos baixados para evitar downloads
 repetidos. Por padrão, usa um diretório temporário. Para persistir os
 dados entre sessões:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Ver diretório de cache atual</span></span>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># see current cache directory</span></span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">get_cache_dir</span>()</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Configurar um diretório permanente</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">set_cache_dir</span>(<span class="st">&quot;~/educabR_data&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># set a custom directory (use a full path, never ~)</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co"># set_cache_dir(&quot;/path/to/your/data/educabR&quot;)</span></span>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># Listar arquivos em cache</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># list cached files</span></span>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">list_cache</span>()</span>
 <span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># Limpar cache (quando necessário)</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># clear cache when needed</span></span>
 <span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="fu">clear_cache</span>()</span></code></pre></div>
 </div>
 <div id="ideb---índice-de-desenvolvimento-da-educação-básica" class="section level2">
@@ -640,8 +640,9 @@ básica no Brasil, cobrindo todas as escolas públicas e privadas.</p>
 <h2>Boas práticas</h2>
 <div id="configure-um-cache-permanente" class="section level3">
 <h3>1. Configure um cache permanente</h3>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># No início de cada projeto</span></span>
-<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="fu">set_cache_dir</span>(<span class="st">&quot;~/educabR_data&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># use a persistent directory of your choice (never use ~ directly)</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="co"># example: set_cache_dir(&quot;/path/to/your/data/educabR&quot;)</span></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a><span class="fu">set_cache_dir</span>(<span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">&quot;educabR_data&quot;</span>))</span></code></pre></div>
 </div>
 <div id="use-amostras-para-exploração" class="section level3">
 <h3>2. Use amostras para exploração</h3>

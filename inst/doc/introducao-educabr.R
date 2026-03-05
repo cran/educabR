@@ -16,16 +16,16 @@ knitr::opts_chunk$set(
 # library(ggplot2)
 
 ## ----cache--------------------------------------------------------------------
-# # Ver diretório de cache atual
+# # see current cache directory
 # get_cache_dir()
 # 
-# # Configurar um diretório permanente
-# set_cache_dir("~/educabR_data")
+# # set a custom directory (use a full path, never ~)
+# # set_cache_dir("/path/to/your/data/educabR")
 # 
-# # Listar arquivos em cache
+# # list cached files
 # list_cache()
 # 
-# # Limpar cache (quando necessário)
+# # clear cache when needed
 # clear_cache()
 
 ## ----ideb-available-----------------------------------------------------------
@@ -261,8 +261,9 @@ knitr::opts_chunk$set(
 # #> 1         78.3           42.1         35.2       48.7               32.1
 
 ## ----boas-praticas-cache------------------------------------------------------
-# # No início de cada projeto
-# set_cache_dir("~/educabR_data")
+# # use a persistent directory of your choice (never use ~ directly)
+# # example: set_cache_dir("/path/to/your/data/educabR")
+# set_cache_dir(file.path(tempdir(), "educabR_data"))
 
 ## ----boas-praticas-amostra----------------------------------------------------
 # # Primeiro explore com amostra pequena

@@ -1,7 +1,7 @@
-21b0f2b36623ff86c6328d88ddd88d92 *DESCRIPTION
+dfd3cd4d734d6462f06249e80771b4a6 *DESCRIPTION
 044c0415d7ff3e7f3d98887799970a59 *LICENSE
 cff13e087e114e5bea49e0af7a65ca5b *NAMESPACE
-9b24048528c3d6983a26308bebd1df6a *NEWS.md
+132243d65c7ab3791a6039140b871c95 *NEWS.md
 e25c4f39e342cd3e294de88c93bed218 *R/educabR-package.R
 c91c8bdc163feff537100d92ffd1bb61 *R/get-censo-escolar.R
 613b365430882de44852b4cfeaa25108 *R/get-enem.R
@@ -11,9 +11,9 @@ f0c73878fd24d695b276f3c5a3f65880 *R/utils-download.R
 dd4fbded15f5eb801ebbdab4c0ad8441 *R/zzz.R
 996d6dfeb99b51fc1586ac5a51ea9eaa *README.md
 4dd14e6bbadcf4860374e1029621795a *build/vignette.rds
-685bb52eb7e288a75fa427d5d9d67dbd *inst/doc/introducao-educabr.R
-296481a4a55e266557f09dab473616d2 *inst/doc/introducao-educabr.Rmd
-c9af45b43385bce24ef514dfd6d850ed *inst/doc/introducao-educabr.html
+f553b4e7e1c6ab456a82a6eaeda2b4d3 *inst/doc/introducao-educabr.R
+8713c1c8a8a99bc32875498b05fbd7de *inst/doc/introducao-educabr.Rmd
+e4acf2c6492591cbf84ea10f7a53d6a2 *inst/doc/introducao-educabr.html
 b4c191abf55d3aca496781f271e8b0e3 *man/available_years.Rd
 af50adda55ce0255cf4257bac00b3349 *man/build_inep_url.Rd
 db52c2c07ed9322038c9beb987564f7a *man/clear_cache.Rd
@@ -43,4 +43,4 @@ a769163fab02926618c497fbcddb8d8b *man/read_inep_file.Rd
 a50cbca226e16f3ed4b5b5aa072cb856 *tests/testthat.R
 739643b66bacd56b1e4f32c37371847e *tests/testthat/test-utils-cache.R
 0a039a738fa8335936298fe97068e193 *tests/testthat/test-utils-download.R
-296481a4a55e266557f09dab473616d2 *vignettes/introducao-educabr.Rmd
+8713c1c8a8a99bc32875498b05fbd7de *vignettes/introducao-educabr.Rmd
