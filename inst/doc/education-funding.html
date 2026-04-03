@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Education Funding: FUNDEB</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Education Funding: FUNDEB</h1>
+
+
+
+<p>This vignette covers FUNDEB (Fundo de Manutencao e Desenvolvimento da
+Educacao Basica), the main funding mechanism for basic education in
+Brazil. educabR provides two functions to access FUNDEB data: resource
+distribution and enrollment counts.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(educabR)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span></code></pre></div>
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>FUNDEB redistributes tax revenues to fund basic education across
+states and municipalities. The data is split into two components:</p>
+<table>
+<colgroup>
+<col width="32%" />
+<col width="25%" />
+<col width="41%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Source</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>get_fundeb_distribution()</code></td>
+<td>STN (National Treasury)</td>
+<td>Monthly transfers by state/municipality and funding source</td>
+</tr>
+<tr class="even">
+<td><code>get_fundeb_enrollment()</code></td>
+<td>FNDE (OData API)</td>
+<td>Enrollment counts used for funding calculation</td>
+</tr>
+</tbody>
+</table>
+<hr />
+</div>
+<div id="fundeb-distribution" class="section level2">
+<h2>FUNDEB Distribution</h2>
+<p>Resource distribution data shows how much money was transferred to
+each state and municipality, broken down by funding source and
+month.</p>
+<div id="funding-sources" class="section level3">
+<h3>Funding sources</h3>
+<p>FUNDEB aggregates revenue from multiple tax sources:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Source</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FPE</td>
+<td>State Participation Fund</td>
+</tr>
+<tr class="even">
+<td>FPM</td>
+<td>Municipal Participation Fund</td>
+</tr>
+<tr class="odd">
+<td>IPI</td>
+<td>Tax on Industrialized Products</td>
+</tr>
+<tr class="even">
+<td>ITR</td>
+<td>Rural Property Tax</td>
+</tr>
+<tr class="odd">
+<td>VAAF</td>
+<td>Fiscal Value-Added (state portion)</td>
+</tr>
+<tr class="even">
+<td>VAAT</td>
+<td>Total Value-Added</td>
+</tr>
+<tr class="odd">
+<td>VAAR</td>
+<td>FUNDEB Complementation</td>
+</tr>
+<tr class="even">
+<td>ICMS</td>
+<td>State Sales Tax</td>
+</tr>
+<tr class="odd">
+<td>IPVA</td>
+<td>Vehicle Tax</td>
+</tr>
+<tr class="even">
+<td>ITCMD</td>
+<td>Inheritance and Donation Tax</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="downloading-distribution-data" class="section level3">
+<h3>Downloading distribution data</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># All distribution data for 2023</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>dist_2023 <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(<span class="at">year =</span> <span class="dv">2023</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Filter by state</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>dist_sp <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(<span class="at">year =</span> <span class="dv">2023</span>, <span class="at">uf =</span> <span class="st">&quot;SP&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co"># Filter by funding source</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>dist_fpm <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(<span class="at">year =</span> <span class="dv">2023</span>, <span class="at">source =</span> <span class="st">&quot;FPM&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Filter by destination (states or municipalities)</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>dist_estados <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">year        =</span> <span class="dv">2023</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">destination =</span> <span class="st">&quot;estados&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="available-years" class="section level3">
+<h3>Available years</h3>
+<p>Data is available from 2007 to 2026.</p>
+</div>
+<div id="data-structure" class="section level3">
+<h3>Data structure</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>dist <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(<span class="dv">2023</span>, <span class="at">uf =</span> <span class="st">&quot;SP&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">glimpse</span>(dist)</span></code></pre></div>
+</div>
+<div id="example-analysis-monthly-transfers-by-source" class="section level3">
+<h3>Example analysis: Monthly transfers by source</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>dist <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(<span class="dv">2023</span>, <span class="at">uf =</span> <span class="st">&quot;SP&quot;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co"># Total monthly transfers by funding source</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>monthly <span class="ot">&lt;-</span> </span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  dist <span class="sc">|&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="fu">group_by</span>(fonte, mes) <span class="sc">|&gt;</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total =</span> <span class="fu">sum</span>(valor, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="fu">ggplot</span>(monthly, <span class="fu">aes</span>(<span class="at">x =</span> mes, <span class="at">y =</span> total <span class="sc">/</span> <span class="fl">1e6</span>, <span class="at">fill =</span> fonte)) <span class="sc">+</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;FUNDEB Transfers to Sao Paulo by Source (2023)&quot;</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>    <span class="at">x     =</span> <span class="st">&quot;Month&quot;</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>    <span class="at">y     =</span> <span class="st">&quot;Total (millions R$)&quot;</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>    <span class="at">fill  =</span> <span class="st">&quot;Source&quot;</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span></code></pre></div>
+</div>
+<div id="example-analysis-comparing-states" class="section level3">
+<h3>Example analysis: Comparing states</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>dist <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(<span class="dv">2023</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># Total annual transfers by state</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>by_state <span class="ot">&lt;-</span> </span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  dist <span class="sc">|&gt;</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="fu">group_by</span>(uf) <span class="sc">|&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total =</span> <span class="fu">sum</span>(valor, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(total)) <span class="sc">|&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">10</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="fu">ggplot</span>(by_state, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(uf, total), <span class="at">y =</span> total <span class="sc">/</span> <span class="fl">1e9</span>)) <span class="sc">+</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">fill =</span> <span class="st">&quot;darkgreen&quot;</span>) <span class="sc">+</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Top 10 States by FUNDEB Transfers (2023)&quot;</span>,</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>    <span class="at">x     =</span> <span class="cn">NULL</span>,</span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>    <span class="at">y     =</span> <span class="st">&quot;Total (billions R$)&quot;</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div>
+<hr />
+</div>
+</div>
+<div id="fundeb-enrollment" class="section level2">
+<h2>FUNDEB Enrollment</h2>
+<p>Enrollment data shows the number of students considered for FUNDEB
+funding calculation, broken down by municipality, education type, school
+network, and location.</p>
+<div id="downloading-enrollment-data" class="section level3">
+<h3>Downloading enrollment data</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># All enrollment data for 2023</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>mat_2023 <span class="ot">&lt;-</span> <span class="fu">get_fundeb_enrollment</span>(<span class="at">year =</span> <span class="dv">2023</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co"># Filter by state (applied at the API level for efficiency)</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>mat_sp <span class="ot">&lt;-</span> <span class="fu">get_fundeb_enrollment</span>(<span class="at">year =</span> <span class="dv">2023</span>, <span class="at">uf =</span> <span class="st">&quot;SP&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># Limited rows for exploration</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>mat_sample <span class="ot">&lt;-</span> <span class="fu">get_fundeb_enrollment</span>(<span class="at">year =</span> <span class="dv">2023</span>, <span class="at">n_max =</span> <span class="dv">5000</span>)</span></code></pre></div>
+</div>
+<div id="available-years-1" class="section level3">
+<h3>Available years</h3>
+<p>Data is available from 2007 to 2026. Data is fetched from the FNDE
+OData API with automatic pagination.</p>
+</div>
+<div id="data-structure-1" class="section level3">
+<h3>Data structure</h3>
+<p>The enrollment data contains these columns:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ano_censo</code></td>
+<td>Census year</td>
+</tr>
+<tr class="even">
+<td><code>uf</code></td>
+<td>State code</td>
+</tr>
+<tr class="odd">
+<td><code>municipio</code></td>
+<td>Municipality name</td>
+</tr>
+<tr class="even">
+<td><code>tipo_rede_educacao</code></td>
+<td>Education network type</td>
+</tr>
+<tr class="odd">
+<td><code>descricao_tipo_educacao</code></td>
+<td>Education type description</td>
+</tr>
+<tr class="even">
+<td><code>descricao_tipo_ensino</code></td>
+<td>Teaching type description</td>
+</tr>
+<tr class="odd">
+<td><code>descricao_tipo_turma</code></td>
+<td>Class type description</td>
+</tr>
+<tr class="even">
+<td><code>descricao_tipo_carga_horaria</code></td>
+<td>Class hours type</td>
+</tr>
+<tr class="odd">
+<td><code>descricao_tipo_localizacao</code></td>
+<td>Location type (urban/rural)</td>
+</tr>
+<tr class="even">
+<td><code>qtd_matricula</code></td>
+<td>Number of enrollments</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>mat <span class="ot">&lt;-</span> <span class="fu">get_fundeb_enrollment</span>(<span class="dv">2023</span>, <span class="at">uf =</span> <span class="st">&quot;RJ&quot;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">glimpse</span>(mat)</span></code></pre></div>
+</div>
+<div id="example-analysis-enrollment-by-education-type" class="section level3">
+<h3>Example analysis: Enrollment by education type</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>mat <span class="ot">&lt;-</span> <span class="fu">get_fundeb_enrollment</span>(<span class="dv">2023</span>, <span class="at">uf =</span> <span class="st">&quot;SP&quot;</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co"># Total enrollment by education type</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>by_type <span class="ot">&lt;-</span> </span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  mat <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="fu">group_by</span>(descricao_tipo_educacao) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total =</span> <span class="fu">sum</span>(qtd_matricula, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(total))</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="fu">ggplot</span>(by_type, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(descricao_tipo_educacao, total), <span class="at">y =</span> total <span class="sc">/</span> <span class="fl">1e3</span>)) <span class="sc">+</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">fill =</span> <span class="st">&quot;coral&quot;</span>) <span class="sc">+</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;FUNDEB Enrollment by Education Type - SP (2023)&quot;</span>,</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>    <span class="at">x     =</span> <span class="cn">NULL</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>    <span class="at">y     =</span> <span class="st">&quot;Enrollments (thousands)&quot;</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div>
+</div>
+<div id="example-analysis-urban-vs-rural-enrollment" class="section level3">
+<h3>Example analysis: Urban vs rural enrollment</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>mat <span class="ot">&lt;-</span> <span class="fu">get_fundeb_enrollment</span>(<span class="dv">2023</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># Compare urban vs rural</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>by_location <span class="ot">&lt;-</span> </span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  mat <span class="sc">|&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="fu">group_by</span>(uf, descricao_tipo_localizacao) <span class="sc">|&gt;</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total =</span> <span class="fu">sum</span>(qtd_matricula, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="fu">ggplot</span>(by_location, <span class="fu">aes</span>(<span class="at">x =</span> uf, <span class="at">y =</span> total <span class="sc">/</span> <span class="fl">1e3</span>, <span class="at">fill =</span> descricao_tipo_localizacao)) <span class="sc">+</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">&quot;dodge&quot;</span>) <span class="sc">+</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;FUNDEB Enrollment: Urban vs Rural by State (2023)&quot;</span>,</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>    <span class="at">x     =</span> <span class="st">&quot;State&quot;</span>,</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>    <span class="at">y     =</span> <span class="st">&quot;Enrollments (thousands)&quot;</span>,</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>    <span class="at">fill  =</span> <span class="st">&quot;Location&quot;</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>))</span></code></pre></div>
+<hr />
+</div>
+</div>
+<div id="combining-distribution-and-enrollment" class="section level2">
+<h2>Combining distribution and enrollment</h2>
+<p>You can combine both datasets to analyze per-student funding across
+states.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Total transfers by state</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>dist <span class="ot">&lt;-</span> <span class="fu">get_fundeb_distribution</span>(<span class="dv">2023</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>transfers <span class="ot">&lt;-</span> </span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  dist <span class="sc">|&gt;</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="fu">group_by</span>(uf) <span class="sc">|&gt;</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_transfer =</span> <span class="fu">sum</span>(valor, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co"># Total enrollment by state</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>mat <span class="ot">&lt;-</span> <span class="fu">get_fundeb_enrollment</span>(<span class="dv">2023</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>enrollment <span class="ot">&lt;-</span> </span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>  mat <span class="sc">|&gt;</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  <span class="fu">group_by</span>(uf) <span class="sc">|&gt;</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_students =</span> <span class="fu">sum</span>(qtd_matricula, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co"># Per-student funding</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>funding <span class="ot">&lt;-</span> </span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>  <span class="fu">inner_join</span>(transfers, enrollment, <span class="at">by =</span> <span class="st">&quot;uf&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">per_student =</span> total_transfer <span class="sc">/</span> total_students) <span class="sc">|&gt;</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(per_student))</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="fu">ggplot</span>(funding, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(uf, per_student), <span class="at">y =</span> per_student)) <span class="sc">+</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">fill =</span> <span class="st">&quot;steelblue&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>  <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;FUNDEB Per-Student Funding by State (2023)&quot;</span>,</span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>    <span class="at">x     =</span> <span class="cn">NULL</span>,</span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a>    <span class="at">y     =</span> <span class="st">&quot;R$ per Student&quot;</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

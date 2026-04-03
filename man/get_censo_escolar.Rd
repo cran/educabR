@@ -7,7 +7,7 @@
 get_censo_escolar(year, uf = NULL, n_max = Inf, keep_zip = TRUE, quiet = FALSE)
 }
 \arguments{
-\item{year}{The year of the census (2007-2024).}
+\item{year}{The year of the census (1995-2024).}
 
 \item{uf}{Optional. Filter by state (UF code or abbreviation).}
 
@@ -55,3 +55,8 @@ escolas_sp <- get_censo_escolar(2023, uf = "SP")
 escolas_sample <- get_censo_escolar(2023, n_max = 1000)
 }
 }
+\seealso{
+Other School Census functions: 
+\code{\link{list_censo_files}()}
+}
+\concept{School Census functions}

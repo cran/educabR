@@ -8,7 +8,7 @@
 #' (Censo Escolar), conducted annually by INEP. Returns school-level data
 #' with information about infrastructure, location, and administrative details.
 #'
-#' @param year The year of the census (2007-2024).
+#' @param year The year of the census (1995-2024).
 #' @param uf Optional. Filter by state (UF code or abbreviation).
 #' @param n_max Maximum number of rows to read. Default is `Inf` (all rows).
 #' @param keep_zip Logical. If `TRUE`, keeps the downloaded ZIP file in cache.
@@ -31,6 +31,7 @@
 #' For detailed information about variables, see INEP's documentation:
 #' \url{https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar}
 #'
+#' @family School Census functions
 #' @export
 #'
 #' @examples
@@ -93,6 +94,12 @@ get_censo_escolar <- function(year,
 
   # standardize column names
   df <- standardize_names(df)
+
+  # convert SAS datetime columns (e.g. "12FEB2024:00:00:00") to Date
+  df <- parse_sas_dates(df)
+
+  # validate data structure
+  validate_data(df, "censo_escolar", year)
 
   # filter by UF if requested
   if (!is.null(uf) && "co_uf" %in% names(df)) {
@@ -193,6 +200,33 @@ uf_to_code <- function(uf) {
   unname(uf_map[uf_upper])
 }
 
+#' Parse SAS datetime columns to Date
+#'
+#' @description
+#' Internal function to convert columns with SAS datetime format
+#' (e.g. "12FEB2024:00:00:00") to Date objects.
+#'
+#' @param df A data frame.
+#'
+#' @return The data frame with date columns converted.
+#'
+#' @keywords internal
+parse_sas_dates <- function(df) {
+  dt_cols <- grep("^(dt_|dh_)", names(df), value = TRUE)
+
+  old_locale <- Sys.getlocale("LC_TIME")
+  on.exit(Sys.setlocale("LC_TIME", old_locale), add = TRUE)
+  Sys.setlocale("LC_TIME", "C")
+
+  for (col in dt_cols) {
+    if (is.character(df[[col]])) {
+      df[[col]] <- as.Date(df[[col]], format = "%d%b%Y:%H:%M:%S")
+    }
+  }
+
+  df
+}
+
 #' Standardize column names
 #'
 #' @description
@@ -207,6 +241,7 @@ uf_to_code <- function(uf) {
 standardize_names <- function(df) {
   names(df) <- names(df) |>
     str_to_lower() |>
+    iconv(from = "UTF-8", to = "ASCII//TRANSLIT") |>
     str_replace_all("[^a-z0-9]", "_") |>
     str_replace_all("_+", "_") |>
     str_remove("^_") |>
@@ -224,6 +259,7 @@ standardize_names <- function(df) {
 #'
 #' @return A character vector of file names found.
 #'
+#' @family School Census functions
 #' @export
 #'
 #' @examples

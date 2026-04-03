@@ -4,12 +4,14 @@
 \alias{find_enem_file}
 \title{Find the ENEM data file}
 \usage{
-find_enem_file(exdir, year)
+find_enem_file(exdir, year, type = "participantes")
 }
 \arguments{
 \item{exdir}{The extraction directory.}
 
 \item{year}{The year.}
+
+\item{type}{The data type (\code{"participantes"} or \code{"resultados"}).}
 }
 \value{
 The path to the data file.

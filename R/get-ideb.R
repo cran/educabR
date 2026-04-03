@@ -36,6 +36,7 @@
 #' @section Data source:
 #' Official IDEB portal: \url{https://www.gov.br/inep/pt-br/areas-de-atuacao/pesquisas-estatisticas-e-indicadores/ideb}
 #'
+#' @family IDEB functions
 #' @export
 #'
 #' @examples
@@ -120,6 +121,12 @@ get_ideb <- function(year,
   # standardize column names
   df <- standardize_names(df)
 
+  # convert vl_* columns to numeric ("-" and "ND" become NA, fix comma decimals)
+  df <- clean_ideb_values(df)
+
+  # validate data structure
+  validate_data(df, "ideb", year)
+
   # filter by UF if requested
   if (!is.null(uf) && level %in% c("escola", "municipio")) {
     uf_code <- uf_to_code(uf)
@@ -148,6 +155,33 @@ get_ideb <- function(year,
   df
 }
 
+#' Clean IDEB numeric columns
+#'
+#' @description
+#' Internal function to convert `vl_*` columns from character to numeric.
+#' Handles `"-"` and `"ND"` as `NA`, and replaces comma decimal separators
+#' with dots.
+#'
+#' @param df A data frame with IDEB data.
+#'
+#' @return The data frame with `vl_*` columns as numeric.
+#'
+#' @keywords internal
+clean_ideb_values <- function(df) {
+  vl_cols <- grep("^vl_", names(df), value = TRUE)
+
+  for (col in vl_cols) {
+    if (is.character(df[[col]])) {
+      values <- df[[col]]
+      values[values %in% c("-", "ND")] <- NA_character_
+      values <- gsub(",", ".", values)
+      df[[col]] <- suppressWarnings(as.numeric(values))
+    }
+  }
+
+  df
+}
+
 #' Read IDEB Excel file
 #'
 #' @description
@@ -171,7 +205,15 @@ read_ideb_excel <- function(file) {
 
   # IDEB Excel files have 9 header rows before the actual column names
   # Row 10 contains the column names (SG_UF, CO_MUNICIPIO, etc.)
-  readxl::read_excel(file, skip = 9)
+  df <- readxl::read_excel(file, skip = 9)
+
+  # force code columns (CO_*) to character to preserve leading zeros
+  code_cols <- grep("^(CO_|CD_)", names(df), ignore.case = TRUE, value = TRUE)
+  for (col in code_cols) {
+    df[[col]] <- as.character(df[[col]])
+  }
+
+  df
 }
 
 #' Get IDEB historical series
@@ -188,6 +230,7 @@ read_ideb_excel <- function(file) {
 #'
 #' @return A tibble with IDEB data for all requested years.
 #'
+#' @family IDEB functions
 #' @export
 #'
 #' @examples
@@ -231,10 +274,14 @@ get_ideb_series <- function(years = NULL,
   }
 
   # download and combine
-  df_list <- purrr::map(years, function(y) {
+  total <- length(years)
+  df_list <- purrr::imap(years, function(y, i) {
+    if (!quiet) {
+      cli::cli_alert_info("processing IDEB {.val {y}} ({i}/{total})...")
+    }
     tryCatch(
       {
-        df <- get_ideb(y, level = level, stage = stage, uf = uf, quiet = TRUE)
+        df <- get_ideb(y, level = level, stage = stage, uf = uf, quiet = quiet)
         df$ano_ideb <- y
         df
       },
@@ -271,6 +318,7 @@ get_ideb_series <- function(years = NULL,
 #'
 #' @return A tibble with available IDEB datasets.
 #'
+#' @family IDEB functions
 #' @export
 #'
 #' @examples

@@ -6,7 +6,7 @@
 \alias{educabR}
 \title{educabR: Download and Process Brazilian Education Data from INEP}
 \description{
-Download and process public education data from INEP (Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira). Provides functions to access microdata from the School Census (Censo Escolar), ENEM (Exame Nacional do Ensino Médio), IDEB (Índice de Desenvolvimento da Educação Básica), and other educational datasets. Returns data in tidy format ready for analysis. Data source: INEP Open Data Portal \url{https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos}.
+Download and process public education data from INEP (Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira). Provides functions to access microdata from the School Census (Censo Escolar), ENEM (Exame Nacional do Ensino Médio), SAEB (Sistema de Avaliação da Educação Básica), Higher Education Census (Censo da Educação Superior), ENADE (Exame Nacional de Desempenho dos Estudantes), ENCCEJA (Exame Nacional para Certificação de Competências de Jovens e Adultos), IDD (Indicador de Diferença entre os Desempenhos Observado e Esperado), CPC (Conceito Preliminar de Curso), IGC (Índice Geral de Cursos), CAPES graduate education data, FUNDEB (Fundo de Manutencao e Desenvolvimento da Educacao Basica), IDEB (Índice de Desenvolvimento da Educação Básica), and other educational datasets. Returns data in tidy format ready for analysis. Data source: INEP Open Data Portal \url{https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos}.
 
 The educabR package provides functions to download and process public
 education data from INEP (Instituto Nacional de Estudos e Pesquisas
@@ -15,6 +15,15 @@ Educacionais Anísio Teixeira). It offers easy access to microdata from:
 \item \strong{School Census (Censo Escolar)}: Annual data on schools, enrollment,
 teachers, and classes in basic education
 \item \strong{ENEM}: Data from the National High School Exam
+\item \strong{SAEB}: Basic Education Assessment System (student performance)
+\item \strong{Higher Education Census (Censo da Educação Superior)}: Annual data
+on institutions, courses, students, and faculty in higher education
+\item \strong{ENADE}: National Student Performance Exam (higher education)
+\item \strong{IDD}: Value-added indicator for undergraduate courses
+\item \strong{CPC}: Preliminary Course Concept (undergraduate quality indicator)
+\item \strong{IGC}: General Index of Courses (institutional quality indicator)
+\item \strong{CAPES}: Graduate education data (programs, students, faculty)
+\item \strong{ENCCEJA}: Youth and Adult Education Certification Exam
 \item \strong{IDEB}: Basic Education Development Index
 }
 
@@ -34,6 +43,51 @@ tools.
 \item \code{\link[=get_enem]{get_enem()}}: Download ENEM microdata
 }
 
+\strong{SAEB:}
+\itemize{
+\item \code{\link[=get_saeb]{get_saeb()}}: Download SAEB microdata
+}
+
+\strong{Higher Education Census:}
+\itemize{
+\item \code{\link[=get_censo_superior]{get_censo_superior()}}: Download Higher Education Census microdata
+}
+
+\strong{ENEM por Escola:}
+\itemize{
+\item \code{\link[=get_enem_escola]{get_enem_escola()}}: Download ENEM results aggregated by school
+}
+
+\strong{ENADE:}
+\itemize{
+\item \code{\link[=get_enade]{get_enade()}}: Download ENADE microdata
+}
+
+\strong{IDD:}
+\itemize{
+\item \code{\link[=get_idd]{get_idd()}}: Download IDD data
+}
+
+\strong{CPC:}
+\itemize{
+\item \code{\link[=get_cpc]{get_cpc()}}: Download CPC data
+}
+
+\strong{IGC:}
+\itemize{
+\item \code{\link[=get_igc]{get_igc()}}: Download IGC data
+}
+
+\strong{CAPES:}
+\itemize{
+\item \code{\link[=get_capes]{get_capes()}}: Download CAPES graduate education data
+}
+
+\strong{ENCCEJA:}
+\itemize{
+\item \code{\link[=get_encceja]{get_encceja()}}: Download ENCCEJA microdata
+}
+
 \strong{IDEB:}
 \itemize{
 \item \code{\link[=get_ideb]{get_ideb()}}: Download IDEB data
@@ -51,8 +105,11 @@ See \code{\link[=get_cache_dir]{get_cache_dir()}} to check the current cache loc
 \section{Data source}{
 
 
-All data is downloaded from INEP's official portal:
+Most data is downloaded from INEP's official portal:
 \url{https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados}
+
+CAPES data is downloaded from the CAPES Open Data Portal:
+\url{https://dadosabertos.capes.gov.br}
 }
 
 \seealso{

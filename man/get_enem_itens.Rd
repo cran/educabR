@@ -4,12 +4,14 @@
 \alias{get_enem_itens}
 \title{Get ENEM item response data}
 \usage{
-get_enem_itens(year, n_max = Inf, quiet = FALSE)
+get_enem_itens(year, n_max = Inf, keep_zip = TRUE, quiet = FALSE)
 }
 \arguments{
-\item{year}{The year of the exam (2009-2023).}
+\item{year}{The year of the exam (1998-2024).}
 
 \item{n_max}{Maximum number of rows to read.}
+
+\item{keep_zip}{Logical. If \code{TRUE}, keeps the downloaded ZIP file in cache.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppresses progress messages.}
 }
@@ -26,3 +28,10 @@ which contains detailed information about each question.
 itens <- get_enem_itens(2023)
 }
 }
+\seealso{
+Other ENEM functions: 
+\code{\link{enem_summary}()},
+\code{\link{get_enem}()},
+\code{\link{get_enem_escola}()}
+}
+\concept{ENEM functions}

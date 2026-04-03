@@ -8,7 +8,11 @@
 #' High School Exam. ENEM is used for university admissions and as a
 #' high school equivalency exam.
 #'
-#' @param year The year of the exam (2009-2023).
+#' @param year The year of the exam (1998-2024).
+#' @param type Type of data to load. Only used for ENEM 2024+, where
+#'   microdata is split into separate files. Options: `"participantes"`
+#'   (demographics and socioeconomic data, default), `"resultados"` (scores).
+#'   Ignored for years before 2024 (single file with all data).
 #' @param n_max Maximum number of rows to read. Default is `Inf` (all rows).
 #'   Consider using a smaller value for exploration, as ENEM files
 #'   contain millions of rows.
@@ -33,11 +37,14 @@
 #' - Use `n_max` to read a sample first for exploration.
 #' - Column names are standardized to lowercase with underscores.
 #' - Score variables start with `nu_nota_` prefix.
+#' - From 2024 onwards, INEP split the microdata into separate files.
+#'   Use the `type` parameter to choose which file to load.
 #'
 #' @section Data dictionary:
 #' For detailed information about variables, see INEP's documentation:
 #' \url{https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/enem}
 #'
+#' @family ENEM functions
 #' @export
 #'
 #' @examples
@@ -47,13 +54,26 @@
 #'
 #' # get full data (warning: large file)
 #' enem_2023 <- get_enem(2023)
+#'
+#' # ENEM 2024+: choose data type
+#' participantes <- get_enem(2024, type = "participantes", n_max = 1000)
+#' resultados <- get_enem(2024, type = "resultados", n_max = 1000)
 #' }
 get_enem <- function(year,
+                     type = "participantes",
                      n_max = Inf,
                      keep_zip = TRUE,
                      quiet = FALSE) {
   # validate arguments
   validate_year(year, "enem")
+  type <- match.arg(type, c("participantes", "resultados"))
+
+  # warn if type is used for years before 2024
+  if (year < 2024 && type != "participantes") {
+    cli::cli_alert_warning(
+      "{.arg type} is only available for ENEM 2024+. Returning full microdata."
+    )
+  }
 
   # build url and file paths
   url <- build_inep_url("enem", year)
@@ -64,9 +84,6 @@ get_enem <- function(year,
   if (!is_cached("enem", zip_filename)) {
     if (!quiet) {
       cli::cli_alert_info("downloading ENEM {.val {year}}...")
-      cli::cli_alert_warning(
-        "ENEM files are large (1-3 GB). this may take a while..."
-      )
     }
     download_inep_file(url, zip_path, quiet = quiet)
   } else if (!quiet) {
@@ -86,7 +103,7 @@ get_enem <- function(year,
   }
 
   # find the main data file
-  data_file <- find_enem_file(exdir, year)
+  data_file <- find_enem_file(exdir, year, type)
 
   if (!quiet) {
     cli::cli_alert_info("reading ENEM data...")
@@ -102,6 +119,13 @@ get_enem <- function(year,
 
   # standardize column names
   df <- standardize_names(df)
+
+  # validate data structure (skip score check for participantes)
+  if (year >= 2024 && type == "participantes") {
+    validate_data(df, "enem_participantes", year)
+  } else {
+    validate_data(df, "enem", year)
+  }
 
   if (!quiet) {
     cli::cli_alert_success(
@@ -120,17 +144,26 @@ get_enem <- function(year,
 #'
 #' @param exdir The extraction directory.
 #' @param year The year.
+#' @param type The data type (`"participantes"` or `"resultados"`).
 #'
 #' @return The path to the data file.
 #'
 #' @keywords internal
-find_enem_file <- function(exdir, year) {
-  # look for the main microdados file
-  patterns <- c(
-    str_c("MICRODADOS_ENEM_", year),
-    "MICRODADOS_ENEM",
-    "DADOS"
-  )
+find_enem_file <- function(exdir, year, type = "participantes") {
+  if (year >= 2024) {
+    # from 2024: separate files (PARTICIPANTES, RESULTADOS, ITENS_PROVA)
+    target <- toupper(type)
+    patterns <- c(
+      str_c(target, "_", year),
+      target
+    )
+  } else {
+    # before 2024: single MICRODADOS_ENEM_{year}.csv
+    patterns <- c(
+      str_c("MICRODADOS_ENEM_", year),
+      "MICRODADOS_ENEM"
+    )
+  }
 
   for (pattern in patterns) {
     files <- list.files(
@@ -165,12 +198,14 @@ find_enem_file <- function(exdir, year) {
 #' Downloads and processes ENEM item response (gabarito) data,
 #' which contains detailed information about each question.
 #'
-#' @param year The year of the exam (2009-2023).
+#' @param year The year of the exam (1998-2024).
 #' @param n_max Maximum number of rows to read.
+#' @param keep_zip Logical. If `TRUE`, keeps the downloaded ZIP file in cache.
 #' @param quiet Logical. If `TRUE`, suppresses progress messages.
 #'
 #' @return A tibble with item response data.
 #'
+#' @family ENEM functions
 #' @export
 #'
 #' @examples
@@ -178,7 +213,7 @@ find_enem_file <- function(exdir, year) {
 #' # get item data for 2023
 #' itens <- get_enem_itens(2023)
 #' }
-get_enem_itens <- function(year, n_max = Inf, quiet = FALSE) {
+get_enem_itens <- function(year, n_max = Inf, keep_zip = TRUE, quiet = FALSE) {
   # validate arguments
   validate_year(year, "enem")
 
@@ -200,6 +235,12 @@ get_enem_itens <- function(year, n_max = Inf, quiet = FALSE) {
   if (!dir.exists(exdir)) {
     zip_path <- cache_path("enem", zip_filename)
     extract_zip(zip_path, exdir, quiet = quiet)
+  }
+
+  # clean up zip if requested
+  zip_path <- cache_path("enem", zip_filename)
+  if (!keep_zip && file.exists(zip_path)) {
+    unlink(zip_path)
   }
 
   # find item file
@@ -230,6 +271,9 @@ get_enem_itens <- function(year, n_max = Inf, quiet = FALSE) {
   # standardize column names
   df <- standardize_names(df)
 
+  # validate data structure
+  validate_data(df, "enem_itens", year)
+
   if (!quiet) {
     cli::cli_alert_success(
       "loaded {.val {nrow(df)}} rows and {.val {ncol(df)}} columns"
@@ -250,6 +294,7 @@ get_enem_itens <- function(year, n_max = Inf, quiet = FALSE) {
 #'
 #' @return A tibble with summary statistics for each score area.
 #'
+#' @family ENEM functions
 #' @export
 #'
 #' @examples
