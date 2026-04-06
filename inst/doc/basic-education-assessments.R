@@ -2,8 +2,12 @@
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE
+  eval     = FALSE,
+  message  = FALSE,
+  warning  = FALSE
 )
+suppressPackageStartupMessages(library(systemfonts))
+suppressPackageStartupMessages(library(textshaping))
 
 ## ----setup--------------------------------------------------------------------
 # library(educabR)
@@ -47,7 +51,7 @@ knitr::opts_chunk$set(
 #     title = "SAEB 2023 - Mathematics Proficiency Distribution",
 #     x     = "Mathematics Score",
 #     y     = "Count"
-#     ) +
+#   ) +
 #   theme_minimal()
 
 ## ----encceja-download---------------------------------------------------------
@@ -80,8 +84,9 @@ knitr::opts_chunk$set(
 #     title = "ENCCEJA 2023 - Top 10 States by Participation",
 #     x     = "State",
 #     y     = "Number of Participants"
-#     ) +
-#   theme_minimal()
+#   ) +
+#   theme_minimal() +
+#   scale_y_continuous(label = scales::number_format(big.mark = ".", decimal.mark = ","))
 
 ## ----enem-escola-download-----------------------------------------------------
 # # Download all ENEM by School data (2005-2015)
@@ -99,10 +104,16 @@ knitr::opts_chunk$set(
 # # Average scores over time (public vs private)
 # trend <-
 #   enem_escola |>
-#   filter(!is.na(nu_media_tot)) |>
+#   mutate(
+#     media_geral = rowMeans(
+#       across(c(nu_media_cn, nu_media_ch, nu_media_lp, nu_media_mt, nu_media_red)),
+#       na.rm = FALSE
+#     )
+#   ) |>
+#   filter(!is.na(media_geral)) |>
 #   group_by(nu_ano, tp_dependencia_adm_escola) |>
 #   summarise(
-#     mean_score = mean(nu_media_tot, na.rm = TRUE),
+#     mean_score = mean(media_geral, na.rm = TRUE),
 #     .groups    = "drop"
 #   ) |>
 #   mutate(
@@ -118,10 +129,10 @@ knitr::opts_chunk$set(
 #   geom_line(linewidth = 1) +
 #   geom_point(size = 2) +
 #   labs(
-#     title = "ENEM Average Score by School Type (2005-2015)",
+#     title = "ENEM Average Score by School Type (2009-2015)",
 #     x     = "Year",
 #     y     = "Average Total Score",
 #     color = "School Type"
-#     ) +
+#   ) +
 #   theme_minimal()
 

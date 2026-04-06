@@ -2,8 +2,12 @@
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment  = "#>",
-  eval     = FALSE
+  eval     = FALSE,
+  message  = FALSE,
+  warning  = FALSE
 )
+suppressPackageStartupMessages(library(systemfonts))
+suppressPackageStartupMessages(library(textshaping))
 
 ## ----setup--------------------------------------------------------------------
 # library(educabR)
@@ -52,8 +56,9 @@ knitr::opts_chunk$set(
 #     title = "Higher Education Institutions by Type (2023)",
 #     x     = NULL,
 #     y     = "Number of Institutions"
-#     ) +
-#   theme_minimal()
+#   ) +
+#   theme_minimal() +
+#   scale_y_continuous(label = scales::number_format(big.mark = ".", decimal.mark = ","))
 
 ## ----enade-download-----------------------------------------------------------
 # # Download ENADE microdata
@@ -62,20 +67,9 @@ knitr::opts_chunk$set(
 # # Sample for exploration
 # enade_sample <- get_enade(year = 2023, n_max = 5000)
 
-## ----enade-analysis-----------------------------------------------------------
-# enade <- get_enade(2023, n_max = 20000)
-# 
-# # Score distribution
-# enade |>
-#   filter(!is.na(nt_ger)) |>
-#   ggplot(aes(x = nt_ger)) +
-#   geom_histogram(bins = 40, fill = "darkgreen", alpha = 0.7) +
-#   labs(
-#     title = "ENADE 2023 - General Score Distribution",
-#     x     = "General Score",
-#     y     = "Count"
-#     ) +
-#   theme_minimal()
+## ----enade-structure----------------------------------------------------------
+# enade <- get_enade(2023, n_max = 5000)
+# glimpse(enade)
 
 ## ----idd-download-------------------------------------------------------------
 # # Download IDD data
@@ -109,8 +103,9 @@ knitr::opts_chunk$set(
 #     title = "CPC 2023 - Course Quality Distribution",
 #     x     = "CPC Score (1-5)",
 #     y     = "Number of Courses"
-#     ) +
-#   theme_minimal()
+#   ) +
+#   theme_minimal() +
+#   scale_y_continuous(label = scales::number_format(big.mark = ".", decimal.mark = ","))
 
 ## ----igc-download-------------------------------------------------------------
 # # Download IGC data (Excel format, requires readxl)
@@ -125,16 +120,17 @@ knitr::opts_chunk$set(
 # # Top institutions by continuous IGC
 # igc |>
 #   filter(!is.na(igc_continuo)) |>
+#   filter(!is.na(sigla_da_ies)) |>
 #   arrange(desc(igc_continuo)) |>
 #   head(20) |>
-#   ggplot(aes(x = reorder(sigla_ies, igc_continuo), y = igc_continuo)) +
+#   ggplot(aes(x = reorder(sigla_da_ies, igc_continuo), y = igc_continuo)) +
 #   geom_col(fill = "darkblue") +
 #   coord_flip() +
 #   labs(
 #     title = "Top 20 Institutions by IGC (2023)",
 #     x     = NULL,
 #     y     = "IGC (Continuous)"
-#     ) +
+#   ) +
 #   theme_minimal()
 
 ## ----capes-download-----------------------------------------------------------
@@ -164,7 +160,7 @@ knitr::opts_chunk$set(
 #     title = "Graduate Programs by Knowledge Area (2023)",
 #     x     = NULL,
 #     y     = "Number of Programs"
-#     ) +
+#   ) +
 #   theme_minimal()
 
 ## ----combined-analysis--------------------------------------------------------
@@ -178,19 +174,19 @@ knitr::opts_chunk$set(
 # igc_summary <-
 #   igc |>
 #   filter(!is.na(igc_faixa)) |>
-#   select(codigo_ies, sigla_ies, igc_continuo, igc_faixa)
+#   select(codigo_da_ies, sigla_da_ies, igc_continuo, igc_faixa)
 # 
 # cpc_summary <-
 #   cpc |>
 #   filter(!is.na(cpc_continuo)) |>
-#   group_by(codigo_ies) |>
+#   group_by(codigo_da_ies) |>
 #   summarise(
 #     n_courses = n(),
 #     mean_cpc  = mean(cpc_continuo, na.rm = TRUE),
 #     .groups   = "drop"
-#     )
+#   )
 # 
-# combined <- inner_join(igc_summary, cpc_summary, by = "codigo_ies")
+# combined <- inner_join(igc_summary, cpc_summary, by = "codigo_da_ies")
 # 
 # ggplot(combined, aes(x = mean_cpc, y = igc_continuo, size = n_courses)) +
 #   geom_point(alpha = 0.4, color = "steelblue") +
@@ -199,6 +195,6 @@ knitr::opts_chunk$set(
 #     x     = "Average CPC (Continuous)",
 #     y     = "IGC (Continuous)",
 #     size  = "Courses Evaluated"
-#     ) +
+#   ) +
 #   theme_minimal()
 

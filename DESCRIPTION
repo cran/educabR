@@ -1,6 +1,6 @@
 Package: educabR
 Title: Download and Process Brazilian Education Data from INEP
-Version: 0.9.0
+Version: 0.9.1
 Authors@R: 
     person("Sidney da Silva Pereira", "Bissoli", 
            email = "sbissoli76@gmail.com", 
@@ -29,15 +29,16 @@ URL: https://github.com/SidneyBissoli/educabR,
         https://sidneybissoli.github.io/educabR/
 BugReports: https://github.com/SidneyBissoli/educabR/issues
 Depends: R (>= 4.1.0)
-Imports: cli, dplyr, httr2, purrr, readr, rlang, stringr, tidyr, tools
-Suggests: ggplot2, jsonlite, knitr, readxl, rmarkdown, testthat (>=
-        3.0.0), tibble, withr
+Imports: cli, dplyr, httr2, lifecycle, purrr, readr, rlang, stringr,
+        tidyr, tools
+Suggests: ggplot2, jsonlite, kableExtra, knitr, readxl, rmarkdown,
+        systemfonts, testthat (>= 3.0.0), textshaping, tibble, withr
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2026-04-03 02:54:29 UTC; SIDNEY
+Packaged: 2026-04-06 18:12:11 UTC; jovyan
 Author: Sidney da Silva Pereira Bissoli [aut, cre] (ORCID:
     <https://orcid.org/0009-0001-0442-3700>)
 Maintainer: Sidney da Silva Pereira Bissoli <sbissoli76@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-04-03 07:00:08 UTC
+Date/Publication: 2026-04-06 22:30:08 UTC
