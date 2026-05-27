@@ -58,6 +58,58 @@ test_that("detect_encoding detects Latin1 file", {
   expect_equal(educabR:::detect_encoding(f), "latin1")
 })
 
+# --- read_inep_file large-file advisory (issue #5) ---------------------------
+
+# mocks base::file.size to claim the (real, tiny) CSV is > 500 MB on disk,
+# so we can exercise the advisory branch without writing huge fixtures
+test_that("read_inep_file warns when reading a large file in full (issue #5)", {
+  f <- tempfile(fileext = ".csv")
+  withr::defer(unlink(f))
+  writeLines("a;b\n1;2\n3;4", f)
+
+  testthat::local_mocked_bindings(
+    file.size = function(...) 600 * 1024^2,
+    .package = "base"
+  )
+
+  expect_message(
+    educabR:::read_inep_file(f, delim = ";"),
+    "lendo arquivo grande"
+  )
+})
+
+test_that("read_inep_file stays silent when n_max caps the read (issue #5)", {
+  f <- tempfile(fileext = ".csv")
+  withr::defer(unlink(f))
+  writeLines("a;b\n1;2\n3;4", f)
+
+  testthat::local_mocked_bindings(
+    file.size = function(...) 600 * 1024^2,
+    .package = "base"
+  )
+
+  msgs <- testthat::capture_messages(
+    educabR:::read_inep_file(f, delim = ";", n_max = 1000)
+  )
+  expect_false(any(grepl("lendo arquivo grande", msgs)))
+})
+
+test_that("read_inep_file respects quiet = TRUE on the large-file advisory (issue #5)", {
+  f <- tempfile(fileext = ".csv")
+  withr::defer(unlink(f))
+  writeLines("a;b\n1;2\n3;4", f)
+
+  testthat::local_mocked_bindings(
+    file.size = function(...) 600 * 1024^2,
+    .package = "base"
+  )
+
+  msgs <- testthat::capture_messages(
+    educabR:::read_inep_file(f, delim = ";", quiet = TRUE)
+  )
+  expect_false(any(grepl("lendo arquivo grande", msgs)))
+})
+
 # --- find_data_files ---------------------------------------------------------
 
 test_that("find_data_files finds CSV files in directory", {
@@ -178,6 +230,182 @@ test_that("build_inep_url errors for unknown dataset", {
   expect_error(build_inep_url("invalid_dataset", 2023), "unknown dataset")
 })
 
+# --- download_inep_file timeout (issue #7) -----------------------------------
+
+# captures the seconds argument passed to httr2::req_timeout by mocking the
+# whole httr2 pipeline. req_perform is mocked to throw so download_inep_file
+# aborts before touching the disk — we only care about the option flowing
+# through to req_timeout. download_inep_file calls req_timeout twice (once
+# inside get_remote_file_size for the HEAD probe, once for the main GET);
+# we record both and assert on the GET-side value, which is always the last.
+test_that("download_inep_file uses default 600s timeout when option unset", {
+  withr::local_options(educabR.download_timeout = NULL)
+  captured <- c()
+
+  testthat::local_mocked_bindings(
+    request    = function(url) structure(list(url = url), class = "httr2_request"),
+    req_method = function(req, ...) req,
+    req_timeout = function(req, seconds, ...) {
+      captured <<- c(captured, seconds)
+      req
+    },
+    req_retry   = function(req, ...) req,
+    req_perform = function(req) stop("mocked"),
+    .package = "httr2"
+  )
+
+  tmp <- tempfile(fileext = ".zip")
+  withr::defer(unlink(tmp))
+
+  expect_error(
+    educabR:::download_inep_file("http://example.com/x.zip", tmp, quiet = TRUE),
+    "download failed"
+  )
+
+  expect_equal(captured[length(captured)], 600)
+})
+
+test_that("download_inep_file respects educabR.download_timeout option (issue #7)", {
+  withr::local_options(educabR.download_timeout = 1234)
+  captured <- c()
+
+  testthat::local_mocked_bindings(
+    request    = function(url) structure(list(url = url), class = "httr2_request"),
+    req_method = function(req, ...) req,
+    req_timeout = function(req, seconds, ...) {
+      captured <<- c(captured, seconds)
+      req
+    },
+    req_retry   = function(req, ...) req,
+    req_perform = function(req) stop("mocked"),
+    .package = "httr2"
+  )
+
+  tmp <- tempfile(fileext = ".zip")
+  withr::defer(unlink(tmp))
+
+  expect_error(
+    educabR:::download_inep_file("http://example.com/x.zip", tmp, quiet = TRUE),
+    "download failed"
+  )
+
+  expect_equal(captured[length(captured)], 1234)
+})
+
+# --- verify_download_integrity (issue #3) ------------------------------------
+
+# helper: write a minimal valid ZIP-shaped blob (magic + padding)
+write_fake_zip <- function(path, payload_bytes = 100L) {
+  writeBin(
+    c(as.raw(c(0x50, 0x4B, 0x03, 0x04)), as.raw(rep(1L, payload_bytes))),
+    path
+  )
+}
+
+test_that("verify_download_integrity passes a valid ZIP with matching size", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  write_fake_zip(f)
+
+  expect_silent(
+    educabR:::verify_download_integrity(f, expected_size = file.size(f))
+  )
+  expect_true(file.exists(f))
+})
+
+test_that("verify_download_integrity tolerates size diff under 1%", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  write_fake_zip(f, payload_bytes = 10000L)
+
+  # claim a size 0.5% larger — within tolerance
+  expect_silent(
+    educabR:::verify_download_integrity(f, expected_size = file.size(f) * 1.005)
+  )
+})
+
+test_that("verify_download_integrity rejects truncated file and unlinks it", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  write_fake_zip(f)
+
+  # pretend the remote claims 10x our actual size — truncation
+  expect_error(
+    educabR:::verify_download_integrity(f, expected_size = file.size(f) * 10),
+    "truncated"
+  )
+  expect_false(file.exists(f))
+})
+
+test_that("verify_download_integrity rejects HTML masquerading as data", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  writeBin(charToRaw("<!DOCTYPE html><html>maintenance</html>"), f)
+
+  expect_error(
+    educabR:::verify_download_integrity(f),
+    "HTML"
+  )
+  expect_false(file.exists(f))
+})
+
+test_that("verify_download_integrity rejects HTML with leading whitespace", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  writeBin(charToRaw("  \n<html><body>error</body></html>"), f)
+
+  expect_error(
+    educabR:::verify_download_integrity(f),
+    "HTML"
+  )
+  expect_false(file.exists(f))
+})
+
+test_that("verify_download_integrity rejects .zip missing magic bytes", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  # not HTML, not a valid zip
+  writeBin(as.raw(c(0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03)), f)
+
+  expect_error(
+    educabR:::verify_download_integrity(f),
+    "ZIP"
+  )
+  expect_false(file.exists(f))
+})
+
+test_that("verify_download_integrity rejects empty file", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  file.create(f)
+
+  expect_error(
+    educabR:::verify_download_integrity(f),
+    "empty"
+  )
+  expect_false(file.exists(f))
+})
+
+test_that("verify_download_integrity skips ZIP magic check for non-zip extensions", {
+  f <- tempfile(fileext = ".xlsx")
+  withr::defer(unlink(f))
+  # arbitrary binary content with NUL byte — not HTML, not a .zip path
+  writeBin(as.raw(c(0xDE, 0xAD, 0x00, 0xBE, 0xEF)), f)
+
+  expect_silent(educabR:::verify_download_integrity(f))
+  expect_true(file.exists(f))
+})
+
+test_that("verify_download_integrity skips size check when expected_size is NULL", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  write_fake_zip(f)
+
+  expect_silent(
+    educabR:::verify_download_integrity(f, expected_size = NULL)
+  )
+})
+
 # --- validate_year -----------------------------------------------------------
 
 test_that("validate_year accepts valid years for all datasets", {
@@ -217,10 +445,27 @@ test_that("validate_year returns year invisibly on success", {
   expect_equal(result, 2023)
 })
 
+test_that("validate_year rejects year vectors (issue #2)", {
+  expect_error(
+    validate_year(c(2017, 2019), "cpc"),
+    "single number"
+  )
+  expect_error(
+    validate_year(c(2017, 2018, 2019), "censo_escolar"),
+    "single number"
+  )
+})
+
+test_that("validate_year rejects non-numeric year (issue #2)", {
+  expect_error(validate_year("2017", "cpc"), "single number")
+  expect_error(validate_year(NULL, "cpc"), "single number")
+  expect_error(validate_year(NA, "cpc"), "single number")
+})
+
 # --- available_years ---------------------------------------------------------
 
 test_that("fallback_years returns correct years for all datasets", {
-  expect_equal(fallback_years("censo_escolar"), 1995:2024)
+  expect_equal(fallback_years("censo_escolar"), 1995:2025)
   expect_equal(fallback_years("enem"), 1998:2024)
   expect_equal(fallback_years("saeb"), c(2011L, 2013L, 2015L, 2017L, 2019L, 2021L, 2023L))
   expect_equal(fallback_years("censo_superior"), 2009:2024)
@@ -653,4 +898,61 @@ test_that("list_ideb_available returns expected structure", {
   expect_s3_class(result, "tbl_df")
   expect_true(all(c("level", "stage", "metric") %in% names(result)))
   expect_true(nrow(result) > 0)
+})
+
+# --- normalize_utf8_nfc ------------------------------------------------------
+
+test_that("normalize_utf8_nfc canonicalizes decomposed strings so == works", {
+  # NFD form: P + u + COMBINING ACUTE ACCENT (U+0301) + blica
+  nfd <- "Pública"
+  # NFC form: P + LATIN SMALL LETTER U WITH ACUTE (U+00FA) + blica
+  nfc <- "Pública"
+
+  # sanity: visually identical, byte-different - direct == fails
+  expect_false(nfd == nfc)
+  expect_false(identical(nfd, nfc))
+
+  df <- data.frame(
+    rede = c(nfd, "Federal"),
+    valor = c(5.1, 6.2),
+    stringsAsFactors = FALSE
+  )
+  out <- educabR:::normalize_utf8_nfc(df)
+
+  # after normalization the NFD form becomes the NFC form
+  expect_true(out$rede[1] == nfc)
+  expect_true(nfc %in% out$rede)
+  expect_identical(out$rede[1], nfc)
+})
+
+test_that("normalize_utf8_nfc leaves non-character columns untouched", {
+  df <- data.frame(
+    a = 1:3,
+    b = c(TRUE, FALSE, NA),
+    c = c("á", "é", "í"),
+    stringsAsFactors = FALSE
+  )
+  out <- educabR:::normalize_utf8_nfc(df)
+
+  expect_identical(out$a, df$a)
+  expect_identical(out$b, df$b)
+  expect_true(is.character(out$c))
+})
+
+test_that("normalize_utf8_nfc handles data frames with no character columns", {
+  df <- data.frame(a = 1:3, b = 4:6)
+  out <- educabR:::normalize_utf8_nfc(df)
+  expect_identical(out, df)
+})
+
+test_that("normalize_utf8_nfc preserves NA values in character columns", {
+  df <- data.frame(
+    rede = c("Pública", NA_character_, "Federal"),
+    stringsAsFactors = FALSE
+  )
+  out <- educabR:::normalize_utf8_nfc(df)
+
+  expect_true(is.na(out$rede[2]))
+  expect_equal(out$rede[1], "Pública")
+  expect_equal(out$rede[3], "Federal")
 })

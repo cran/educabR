@@ -23,6 +23,76 @@ get_remote_file_size <- function(url) {
   )
 }
 
+# verify a downloaded file is structurally plausible
+# unlinks destfile and aborts on detected corruption so a bad blob
+# is never silently cached
+verify_download_integrity <- function(destfile,
+                                      expected_size = NULL,
+                                      url = NULL) {
+  if (!file.exists(destfile)) {
+    cli::cli_abort("download missing: {.path {destfile}}")
+  }
+
+  actual_size <- file.size(destfile)
+
+  if (is.na(actual_size) || actual_size == 0) {
+    unlink(destfile)
+    cli::cli_abort(c(
+      "downloaded file is empty",
+      "i" = "retry the download \u2014 the cached file has been deleted"
+    ))
+  }
+
+  # size check (catches truncation when Content-Length is known)
+  if (!is.null(expected_size) && expected_size > 0) {
+    diff_pct <- abs(actual_size - expected_size) / expected_size
+    if (diff_pct > 0.01) {
+      unlink(destfile)
+      cli::cli_abort(c(
+        "downloaded file looks truncated",
+        "x" = "expected {.val {expected_size}} bytes, got {.val {actual_size}}",
+        "i" = "retry the download \u2014 the cached file has been deleted"
+      ))
+    }
+  }
+
+  # read first 64 bytes for content sniffing
+  first_bytes <- readBin(destfile, "raw", n = 64)
+
+  # HTML masquerade check (server returned an error page with HTTP 200)
+  # binary files commonly have NUL bytes in their headers; HTML does not.
+  # useBytes = TRUE keeps grepl from trying to interpret arbitrary binary
+  # payloads as the system locale and emitting translation warnings
+  if (!any(first_bytes == as.raw(0))) {
+    first_text <- rawToChar(first_bytes)
+    if (grepl("^\\s*<(!doctype|html)", first_text,
+              ignore.case = TRUE, useBytes = TRUE)) {
+      unlink(destfile)
+      cli::cli_abort(c(
+        "downloaded file is HTML, not data",
+        "x" = "server may be in maintenance or returned an error page",
+        "i" = if (!is.null(url)) "url: {.url {url}}" else "",
+        "i" = "retry the download \u2014 the cached file has been deleted"
+      ))
+    }
+  }
+
+  # ZIP magic-bytes check (only for files we expect to be ZIP)
+  if (tolower(tools::file_ext(destfile)) == "zip") {
+    zip_magic <- as.raw(c(0x50, 0x4B, 0x03, 0x04))
+    if (length(first_bytes) < 4L || !identical(first_bytes[1:4], zip_magic)) {
+      unlink(destfile)
+      cli::cli_abort(c(
+        "downloaded file is not a valid ZIP archive",
+        "x" = "missing ZIP magic bytes (PK\\x03\\x04)",
+        "i" = "retry the download \u2014 the cached file has been deleted"
+      ))
+    }
+  }
+
+  invisible(destfile)
+}
+
 #' Download a file from INEP
 #'
 #' @description
@@ -40,9 +110,11 @@ download_inep_file <- function(url, destfile, quiet = FALSE) {
   # create directory if needed
   dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
 
-  # check file size before downloading
+  # query expected size once — reused for the progress message and for the
+  # post-download integrity check
+  file_size <- get_remote_file_size(url)
+
   if (!quiet) {
-    file_size <- get_remote_file_size(url)
     if (!is.null(file_size)) {
       size_mb <- round(file_size / 1024^2, 1)
       if (size_mb >= 1000) {
@@ -56,24 +128,22 @@ download_inep_file <- function(url, destfile, quiet = FALSE) {
     }
   }
 
+  # timeout is configurable via options(educabR.download_timeout = N) — large
+  # microdata files (e.g. ENEM ~1.6 GB) can exceed the 600s default on slow
+  # connections
+  timeout <- getOption("educabR.download_timeout", default = 600)
+
   # use httr2 for better error handling
   tryCatch(
     {
       req <- httr2::request(url) |>
-        httr2::req_timeout(seconds = 600) |>
+        httr2::req_timeout(seconds = timeout) |>
         httr2::req_retry(max_tries = 3, backoff = ~ 5)
 
       resp <- httr2::req_perform(req)
 
       # write to file
       writeBin(httr2::resp_body_raw(resp), destfile)
-
-      if (!quiet) {
-        size_mb <- round(file.size(destfile) / 1024^2, 2)
-        cli::cli_alert_success("downloaded {.val {size_mb}} MB")
-      }
-
-      destfile
     },
     error = function(e) {
       cli::cli_abort(
@@ -85,6 +155,17 @@ download_inep_file <- function(url, destfile, quiet = FALSE) {
       )
     }
   )
+
+  # verify integrity before declaring success; aborts here surface to the
+  # user directly instead of being wrapped as "download failed"
+  verify_download_integrity(destfile, expected_size = file_size, url = url)
+
+  if (!quiet) {
+    size_mb <- round(file.size(destfile) / 1024^2, 2)
+    cli::cli_alert_success("downloaded {.val {size_mb}} MB")
+  }
+
+  destfile
 }
 
 #' Extract a ZIP file
@@ -113,7 +194,13 @@ extract_zip <- function(zipfile, exdir, quiet = FALSE) {
       files <- withCallingHandlers(
         utils::unzip(zipfile, exdir = exdir),
         warning = function(w) {
-          if (grepl("erro|error", conditionMessage(w), ignore.case = TRUE)) {
+          # mute only the specific warnings utils::unzip emits when it
+          # fails to decode non-ASCII filenames in INEP archives — the
+          # fallback below still triggers via length(files) == 0, so
+          # silencing here only suppresses log noise, not recovery.
+          msg <- conditionMessage(w)
+          if (grepl("error -?\\d+ in extracting", msg, ignore.case = TRUE) ||
+              grepl("Falha na convers", msg, ignore.case = TRUE)) {
             invokeRestart("muffleWarning")
           }
         }
@@ -131,63 +218,51 @@ extract_zip <- function(zipfile, exdir, quiet = FALSE) {
     },
     error = function(e) {
       # encoding errors or empty extraction — try alternative method
-      if (TRUE) {
-        if (!quiet) {
-          cli::cli_alert_warning(
-            "standard extraction failed due to encoding, trying alternative method..."
-          )
-        }
-
-        # try using system unzip command (Windows has tar that can handle zip)
-        result <- tryCatch(
-          {
-            # use PowerShell Expand-Archive on Windows
-            if (.Platform$OS.type == "windows") {
-              cmd <- sprintf(
-                'powershell -Command "Expand-Archive -Path \'%s\' -DestinationPath \'%s\' -Force"',
-                normalizePath(zipfile, winslash = "/"),
-                normalizePath(exdir, winslash = "/", mustWork = FALSE)
-              )
-              system(cmd, intern = FALSE, ignore.stdout = TRUE, ignore.stderr = TRUE)
-            } else {
-              # on unix, use unzip command
-              system2("unzip", args = c("-o", "-q", shQuote(zipfile), "-d", shQuote(exdir)))
-            }
-
-            # list extracted files
-            files <- list.files(exdir, recursive = TRUE, full.names = TRUE)
-
-            if (length(files) > 0) {
-              if (!quiet) {
-                cli::cli_alert_success("extracted {.val {length(files)}} file(s)")
-              }
-              return(files)
-            } else {
-              stop("no files extracted")
-            }
-          },
-          error = function(e2) {
-            cli::cli_abort(
-              c(
-                "extraction failed with both methods",
-                "x" = "file: {.path {zipfile}}",
-                "i" = "original error: {conditionMessage(e)}",
-                "i" = "alternative error: {conditionMessage(e2)}"
-              )
-            )
-          }
+      if (!quiet) {
+        cli::cli_alert_warning(
+          "standard extraction failed due to encoding, trying alternative method..."
         )
-
-        return(result)
       }
 
-      # not an encoding error, report original error
-      cli::cli_abort(
-        c(
-          "extraction failed",
-          "x" = "file: {.path {zipfile}}",
-          "i" = "error: {conditionMessage(e)}"
-        )
+      # try using system unzip command (Windows has tar that can handle zip)
+      tryCatch(
+        {
+          # use PowerShell Expand-Archive on Windows
+          if (.Platform$OS.type == "windows") {
+            cmd <- sprintf(
+              'powershell -Command "Expand-Archive -Path \'%s\' -DestinationPath \'%s\' -Force"',
+              normalizePath(zipfile, winslash = "/"),
+              normalizePath(exdir, winslash = "/", mustWork = FALSE)
+            )
+            system(cmd, intern = FALSE, ignore.stdout = TRUE, ignore.stderr = TRUE)
+          } else {
+            # on unix, use unzip command
+            system2("unzip", args = c("-o", "-q", shQuote(zipfile), "-d", shQuote(exdir)))
+          }
+
+          # list extracted files
+          files <- list.files(exdir, recursive = TRUE, full.names = TRUE)
+
+          if (length(files) == 0) {
+            stop("no files extracted")
+          }
+
+          if (!quiet) {
+            cli::cli_alert_success("extracted {.val {length(files)}} file(s)")
+          }
+
+          files
+        },
+        error = function(e2) {
+          cli::cli_abort(
+            c(
+              "extraction failed with both methods",
+              "x" = "file: {.path {zipfile}}",
+              "i" = "original error: {conditionMessage(e)}",
+              "i" = "alternative error: {conditionMessage(e2)}"
+            )
+          )
+        }
       )
     }
   )
@@ -307,9 +382,13 @@ build_inep_url <- function(dataset, year, ...) {
 
   url <- switch(
     dataset,
-    "censo_escolar" = str_c(
-      base, "/dados_abertos/microdados_censo_escolar_", year, ".zip"
-    ),
+    "censo_escolar" = {
+      # 2025: INEP added trailing underscore to filename
+      suffix <- if (year == 2025) "_" else ""
+      str_c(
+        base, "/dados_abertos/microdados_censo_escolar_", year, suffix, ".zip"
+      )
+    },
     "enem" = str_c(
       base, "/microdados/microdados_enem_", year, ".zip"
     ),
@@ -356,7 +435,7 @@ build_inep_url <- function(dataset, year, ...) {
 fallback_years <- function(dataset) {
   switch(
     dataset,
-    "censo_escolar" = 1995:2024,
+    "censo_escolar" = 1995:2025,
     "enem" = 1998:2024,
     "saeb" = c(2011L, 2013L, 2015L, 2017L, 2019L, 2021L, 2023L),
     "censo_superior" = 2009:2024,
@@ -606,6 +685,17 @@ available_years <- function(dataset) {
 #'
 #' @keywords internal
 validate_year <- function(year, dataset) {
+  if (length(year) != 1L || !is.numeric(year)) {
+    cli::cli_abort(
+      c(
+        "{.arg year} must be a single number",
+        "x" = "got {.cls {class(year)}} of length {length(year)}",
+        "i" = "this function downloads one year per call",
+        "i" = "to combine years, use {.code purrr::map_dfr(years, \\(y) get_xxx(y))}"
+      )
+    )
+  }
+
   available <- available_years(dataset)
 
   if (!year %in% available) {
@@ -702,6 +792,35 @@ detect_encoding <- function(file) {
   }
 }
 
+#' Normalize character columns to UTF-8 NFC
+#'
+#' @description
+#' Ensures every character column in a data frame is valid UTF-8 in
+#' canonical NFC form. Without this step, equality comparisons against
+#' string literals fail silently on Windows when the source file's
+#' encoding produces decomposed (NFD) or otherwise non-canonical strings
+#' (e.g. `filter(rede == "Pública")` returns 0 rows even though
+#' `"Pública"` is in the data). Applied at every read entrypoint —
+#' [read_inep_file()], [read_ideb_excel()], [read_excel_safe()], and the
+#' FUNDEB OData fetcher — so downstream user code can compare with
+#' literals safely on any platform.
+#'
+#' @param df A data frame.
+#'
+#' @return The data frame with character columns normalized; non-character
+#'   columns are returned unchanged.
+#'
+#' @keywords internal
+normalize_utf8_nfc <- function(df) {
+  chr_cols <- vapply(df, is.character, logical(1))
+  if (any(chr_cols)) {
+    df[chr_cols] <- lapply(df[chr_cols], function(x) {
+      stringi::stri_trans_nfc(enc2utf8(x))
+    })
+  }
+  df
+}
+
 #' Read INEP data file
 #'
 #' @description
@@ -711,6 +830,7 @@ detect_encoding <- function(file) {
 #' @param delim The delimiter character.
 #' @param encoding The file encoding.
 #' @param n_max Maximum number of rows to read.
+#' @param quiet Logical. If `TRUE`, suppresses the large-file advisory.
 #'
 #' @return A tibble with the data.
 #'
@@ -718,7 +838,8 @@ detect_encoding <- function(file) {
 read_inep_file <- function(file,
                            delim = ";",
                            encoding = NULL,
-                           n_max = Inf) {
+                           n_max = Inf,
+                           quiet = FALSE) {
   # detect encoding if not specified
   if (is.null(encoding)) {
     encoding <- detect_encoding(file)
@@ -746,8 +867,18 @@ read_inep_file <- function(file,
     }
   }
 
+  # advise when reading a large file in full (issue #5) — recent Censo
+  # Escolar microdata reaches ~50M rows and silently exhausts memory
+  if (!quiet && is.infinite(n_max) && file.size(file) > 500 * 1024^2) {
+    size_gb <- round(file.size(file) / 1024^3, 1)
+    cli::cli_alert_warning(c(
+      "lendo arquivo grande ({size_gb} GB) inteiramente em memoria",
+      "i" = "considere {.arg n_max} ou filtros por UF para reduzir"
+    ))
+  }
+
   # read with readr
-  readr::read_delim(
+  df <- readr::read_delim(
     file,
     delim = delim,
     locale = readr::locale(encoding = encoding),
@@ -756,4 +887,6 @@ read_inep_file <- function(file,
     col_types = col_spec,
     progress = TRUE
   )
+
+  normalize_utf8_nfc(df)
 }

@@ -696,7 +696,7 @@ test_that("get_fundeb_enrollment full pipeline fetches from API when not cached"
   expect_equal(nrow(result), 2)
 
   # Check that it was cached
-  file_path <- educabR:::cache_path("fundeb", "fundeb_enrollment_2018.csv")
+  file_path <- educabR:::cache_path("fundeb_enrollment", "fundeb_enrollment_2018.csv")
   expect_true(file.exists(file_path))
 })
 
@@ -710,6 +710,9 @@ test_that("download_inep_file creates directory and downloads file", {
 
   local_mocked_bindings(
     get_remote_file_size = function(...) 5242880,
+    # bypass post-download integrity check — mocked body is much smaller
+    # than the mocked Content-Length on purpose for the messaging path
+    verify_download_integrity = function(destfile, ...) invisible(destfile),
     .package = "educabR"
   )
 
@@ -781,6 +784,9 @@ test_that("download_inep_file reports GB for large files", {
 
   local_mocked_bindings(
     get_remote_file_size = function(...) 2 * 1024^3,
+    # bypass post-download integrity check — we're verifying the GB
+    # progress message, not the size-match logic
+    verify_download_integrity = function(destfile, ...) invisible(destfile),
     .package = "educabR"
   )
 
@@ -916,6 +922,20 @@ test_that("read_inep_file auto-detects encoding", {
   # encoding = NULL triggers auto-detection
   result <- educabR:::read_inep_file(temp_file, delim = ";", encoding = NULL)
   expect_s3_class(result, "tbl_df")
+})
+
+test_that("read_inep_file normalizes character columns to UTF-8 NFC", {
+  temp_file <- withr::local_tempfile(fileext = ".csv")
+  # Write a file with accented characters in UTF-8
+  writeLines(c("rede;valor", "P\u00fablica;100", "Estadual;200"), temp_file,
+             useBytes = FALSE)
+
+  result <- educabR:::read_inep_file(temp_file, delim = ";")
+
+  # The accented string should match a literal comparison
+  expect_true("P\u00fablica" %in% result$rede)
+  # All character columns should be valid UTF-8 NFC
+  expect_equal(Encoding(result$rede[1]), "UTF-8")
 })
 
 test_that("read_inep_file respects n_max", {

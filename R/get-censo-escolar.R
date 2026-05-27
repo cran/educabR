@@ -8,7 +8,17 @@
 #' (Censo Escolar), conducted annually by INEP. Returns school-level data
 #' with information about infrastructure, location, and administrative details.
 #'
-#' @param year The year of the census (1995-2024).
+#' @param year The year of the census (1995-2025).
+#' @param file Optional. Name (or partial name) of a specific CSV file to load.
+#'   By default, loads the main school data file. Use [list_censo_files()] to
+#'   see available files for a given year.
+#'
+#'   - **1995-2006**: Multiple legacy files (e.g. `"EDUCPROF"`, `"DADOSCURSO"`).
+#'   - **2007-2024**: Single file with all data (escola, matrícula, docente, turma).
+#'   - **2025+**: Data split into separate tables. Use `file` to select:
+#'     `"Escola"` (default), `"Matricula"`, `"Docente"`, `"Turma"`,
+#'     `"Gestor"`, `"Curso_Tecnico"`. Non-escola tables lack `CO_UF`,
+#'     so the `uf` filter does not apply to them.
 #' @param uf Optional. Filter by state (UF code or abbreviation).
 #' @param n_max Maximum number of rows to read. Default is `Inf` (all rows).
 #' @param keep_zip Logical. If `TRUE`, keeps the downloaded ZIP file in cache.
@@ -26,6 +36,9 @@
 #' - The microdata contains one row per school (~217,000 schools in 2023).
 #' - Column names are standardized to lowercase with underscores.
 #' - Use the `uf` parameter to filter by state for faster processing.
+#' - Older years (1995-2006) contain multiple CSV files with different data.
+#'   Use [list_censo_files()] to discover available files, then pass the
+#'   desired file name to the `file` parameter.
 #'
 #' @section Data dictionary:
 #' For detailed information about variables, see INEP's documentation:
@@ -44,8 +57,23 @@
 #'
 #' # read only first 1000 rows for exploration
 #' escolas_sample <- get_censo_escolar(2023, n_max = 1000)
+#'
+#' # list available files for an older year
+#' list_censo_files(1995)
+#' # [1] "CENSOESC_1995.CSV" "DADOS_DESP_1995.CSV" "DADOSCURSO_1995.CSV"
+#'
+#' # load a specific file from an older year
+#' cursos <- get_censo_escolar(1995, file = "DADOSCURSO")
+#'
+#' # 2025: data is split into separate tables
+#' list_censo_files(2025)
+#' escolas_2025 <- get_censo_escolar(2025)
+#' matriculas_2025 <- get_censo_escolar(2025, file = "Matricula")
+#' docentes_2025 <- get_censo_escolar(2025, file = "Docente")
+#' turmas_2025 <- get_censo_escolar(2025, file = "Turma")
 #' }
 get_censo_escolar <- function(year,
+                              file = NULL,
                               uf = NULL,
                               n_max = Inf,
                               keep_zip = TRUE,
@@ -55,7 +83,7 @@ get_censo_escolar <- function(year,
 
   # build url and file paths
   url <- build_inep_url("censo_escolar", year)
-  zip_filename <- str_c("microdados_censo_escolar_", year, ".zip")
+  zip_filename <- basename(url)
   zip_path <- cache_path("censo_escolar", zip_filename)
 
   # download if not cached
@@ -82,18 +110,25 @@ get_censo_escolar <- function(year,
     unlink(zip_path)
   }
 
-  # find the main data file (microdados_ed_basica_{year}.csv)
-  data_file <- find_censo_file(exdir, year)
+  # find the data file
+  if (!is.null(file)) {
+    data_file <- find_censo_file_by_name(exdir, file, year)
+  } else {
+    data_file <- find_censo_file(exdir, year)
+  }
 
   if (!quiet) {
-    cli::cli_alert_info("reading school data...")
+    cli::cli_alert_info("reading {.file {basename(data_file)}}...")
   }
+
+  # detect delimiter from file header (older years use "|" instead of ";")
+  delim <- detect_delim(data_file)
 
   # when filtering by UF, read all rows first, then filter and apply n_max
   read_max <- if (!is.null(uf)) Inf else n_max
 
   # read the file
-  df <- read_inep_file(data_file, delim = ";", n_max = read_max)
+  df <- read_inep_file(data_file, delim = delim, n_max = read_max, quiet = quiet)
 
   # standardize column names
   df <- standardize_names(df)
@@ -101,14 +136,25 @@ get_censo_escolar <- function(year,
   # convert SAS datetime columns (e.g. "12FEB2024:00:00:00") to Date
   df <- parse_sas_dates(df)
 
-  # validate data structure
-  validate_data(df, "censo_escolar", year)
+  # validate data structure (only for main school file)
+  if (is.null(file)) {
+    validate_data(df, "censo_escolar", year)
+  }
 
   # filter by UF if requested
-  if (!is.null(uf) && "co_uf" %in% names(df)) {
-    uf_code <- as.character(uf_to_code(uf))
-    df <- df |>
-      dplyr::filter(.data$co_uf == uf_code)
+  if (!is.null(uf)) {
+    if ("co_uf" %in% names(df)) {
+      uf_code <- as.character(uf_to_code(uf))
+      df <- df |>
+        dplyr::filter(.data$co_uf == uf_code)
+    } else if ("sigla" %in% names(df)) {
+      # older years (pre-2007) use sigla instead of co_uf
+      df <- df |>
+        dplyr::filter(.data$sigla == toupper(uf))
+    } else if ("uf" %in% names(df)) {
+      df <- df |>
+        dplyr::filter(.data$uf == toupper(uf))
+    }
   }
 
   # apply n_max after UF filter
@@ -125,7 +171,64 @@ get_censo_escolar <- function(year,
   df
 }
 
-#' Find the Censo Escolar data file
+#' Find a Censo Escolar file by user-supplied name
+#'
+#' @description
+#' Internal function to locate a specific CSV file within the
+#' extracted census directory by partial name match.
+#'
+#' @param exdir The extraction directory.
+#' @param file The file name or partial name to match.
+#' @param year The year (used in error messages).
+#'
+#' @return The full path to the matched file.
+#'
+#' @keywords internal
+find_censo_file_by_name <- function(exdir, file, year) {
+  all_csvs <- list.files(
+    exdir,
+    pattern = "\\.(csv|CSV)$",
+    recursive = TRUE,
+    full.names = TRUE,
+    ignore.case = TRUE
+  )
+
+  if (length(all_csvs) == 0) {
+    cli::cli_abort(
+      c(
+        "no CSV files found for Censo Escolar {.val {year}}",
+        "i" = "directory: {.path {exdir}}"
+      )
+    )
+  }
+
+  # match against basename (case-insensitive)
+  basenames <- basename(all_csvs)
+  matches <- grep(file, basenames, ignore.case = TRUE, value = FALSE)
+
+  if (length(matches) == 0) {
+    cli::cli_abort(
+      c(
+        "no file matching {.val {file}} found for Censo Escolar {.val {year}}",
+        "i" = "available files: {.val {basenames}}",
+        "i" = "use {.fun list_censo_files} to see all files"
+      )
+    )
+  }
+
+  if (length(matches) > 1) {
+    cli::cli_warn(
+      c(
+        "multiple files match {.val {file}}, using first: {.file {basenames[matches[1]]}}",
+        "i" = "all matches: {.val {basenames[matches]}}"
+      )
+    )
+  }
+
+  all_csvs[matches[1]]
+}
+
+#' Find the Censo Escolar main data file
 #'
 #' @description
 #' Internal function to locate the main data file within the
@@ -138,12 +241,19 @@ get_censo_escolar <- function(year,
 #'
 #' @keywords internal
 find_censo_file <- function(exdir, year) {
+
   # look for the main microdados file
-  # pattern: microdados_ed_basica_{year}.csv
+  # 2007-2024: microdados_ed_basica_{year}.csv
+  # 1995-2006: CENSOESC_{year}.CSV
+  # 2025+: Tabela_Escola_{year}.csv (data split into multiple tables)
   patterns <- c(
     str_c("microdados_ed_basica_", year),
     "microdados_ed_basica",
-    "microdados"
+    "microdados",
+    str_c("censoesc_", year),
+    "censoesc",
+    str_c("tabela_escola_", year),
+    "tabela_escola"
   )
 
   for (pattern in patterns) {
@@ -168,7 +278,8 @@ find_censo_file <- function(exdir, year) {
   cli::cli_abort(
     c(
       "no data file found",
-      "i" = "directory: {.path {exdir}}"
+      "i" = "directory: {.path {exdir}}",
+      "i" = "use {.fun list_censo_files} to see available files"
     )
   )
 }
@@ -262,6 +373,9 @@ standardize_names <- function(df) {
 #'
 #' @description
 #' Lists the data files available in a downloaded School Census.
+#' Use this to discover which files are available for a given year,
+#' then pass the desired file name to [get_censo_escolar()]'s `file`
+#' parameter.
 #'
 #' @param year The year of the census.
 #'
@@ -272,7 +386,15 @@ standardize_names <- function(df) {
 #'
 #' @examples
 #' \dontrun{
-#' list_censo_files(2023)
+#' # first download the data
+#' get_censo_escolar(1995)
+#'
+#' # then see what files are available
+#' list_censo_files(1995)
+#' # [1] "CENSOESC_1995.CSV" "DADOS_DESP_1995.CSV" "DADOSCURSO_1995.CSV"
+#'
+#' # load a specific file
+#' cursos <- get_censo_escolar(1995, file = "DADOSCURSO")
 #' }
 list_censo_files <- function(year) {
   validate_year(year, "censo_escolar")

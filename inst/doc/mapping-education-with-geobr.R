@@ -41,7 +41,7 @@ suppressPackageStartupMessages(library(textshaping))
 # # Keep only public schools and the IDEB indicator
 # ideb_muni <-
 #   ideb_muni |>
-#   filter(grepl("blica", rede), indicador == "IDEB")
+#   filter(rede == "P\u00fablica", indicador == "IDEB")
 # 
 # municipalities <- read_municipality(year = 2020, showProgress = FALSE)
 

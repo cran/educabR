@@ -102,6 +102,19 @@ Use \code{\link[=set_cache_dir]{set_cache_dir()}} to configure a persistent cach
 See \code{\link[=get_cache_dir]{get_cache_dir()}} to check the current cache location.
 }
 
+\section{Package options}{
+
+\itemize{
+\item \code{educabR.cache_dir}: path to the cache directory. Set via
+\code{\link[=set_cache_dir]{set_cache_dir()}} or directly with \code{options()}. Defaults to
+\code{file.path(tempdir(), "educabR_cache")}.
+\item \code{educabR.download_timeout}: HTTP timeout in seconds for
+\code{download_inep_file()}. Defaults to \code{600} (10 minutes). Raise it for
+large microdata (e.g. ENEM \code{participantes} is ~1.6 GB) on slow
+connections: \code{options(educabR.download_timeout = 1800)}.
+}
+}
+
 \section{Data source}{
 
 
@@ -123,6 +136,11 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Sidney da Silva Pereira Bissoli \email{sbissoli76@gmail.com} (\href{https://orcid.org/0009-0001-0442-3700}{ORCID})
+
+Authors:
+\itemize{
+  \item Sidney da Silva Pereira Bissoli \email{sbissoli76@gmail.com} (\href{https://orcid.org/0009-0001-0442-3700}{ORCID})
+}
 
 }
 \keyword{internal}

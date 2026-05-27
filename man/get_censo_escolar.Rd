@@ -4,10 +4,29 @@
 \alias{get_censo_escolar}
 \title{Get School Census (Censo Escolar) data}
 \usage{
-get_censo_escolar(year, uf = NULL, n_max = Inf, keep_zip = TRUE, quiet = FALSE)
+get_censo_escolar(
+  year,
+  file = NULL,
+  uf = NULL,
+  n_max = Inf,
+  keep_zip = TRUE,
+  quiet = FALSE
+)
 }
 \arguments{
-\item{year}{The year of the census (1995-2024).}
+\item{year}{The year of the census (1995-2025).}
+
+\item{file}{Optional. Name (or partial name) of a specific CSV file to load.
+By default, loads the main school data file. Use \code{\link[=list_censo_files]{list_censo_files()}} to
+see available files for a given year.
+\itemize{
+\item \strong{1995-2006}: Multiple legacy files (e.g. \code{"EDUCPROF"}, \code{"DADOSCURSO"}).
+\item \strong{2007-2024}: Single file with all data (escola, matrícula, docente, turma).
+\item \strong{2025+}: Data split into separate tables. Use \code{file} to select:
+\code{"Escola"} (default), \code{"Matricula"}, \code{"Docente"}, \code{"Turma"},
+\code{"Gestor"}, \code{"Curso_Tecnico"}. Non-escola tables lack \code{CO_UF},
+so the \code{uf} filter does not apply to them.
+}}
 
 \item{uf}{Optional. Filter by state (UF code or abbreviation).}
 
@@ -35,6 +54,9 @@ basic education (early childhood, elementary, and high school).
 \item The microdata contains one row per school (~217,000 schools in 2023).
 \item Column names are standardized to lowercase with underscores.
 \item Use the \code{uf} parameter to filter by state for faster processing.
+\item Older years (1995-2006) contain multiple CSV files with different data.
+Use \code{\link[=list_censo_files]{list_censo_files()}} to discover available files, then pass the
+desired file name to the \code{file} parameter.
 }
 }
 \section{Data dictionary}{
@@ -53,10 +75,24 @@ escolas_sp <- get_censo_escolar(2023, uf = "SP")
 
 # read only first 1000 rows for exploration
 escolas_sample <- get_censo_escolar(2023, n_max = 1000)
+
+# list available files for an older year
+list_censo_files(1995)
+# [1] "CENSOESC_1995.CSV" "DADOS_DESP_1995.CSV" "DADOSCURSO_1995.CSV"
+
+# load a specific file from an older year
+cursos <- get_censo_escolar(1995, file = "DADOSCURSO")
+
+# 2025: data is split into separate tables
+list_censo_files(2025)
+escolas_2025 <- get_censo_escolar(2025)
+matriculas_2025 <- get_censo_escolar(2025, file = "Matricula")
+docentes_2025 <- get_censo_escolar(2025, file = "Docente")
+turmas_2025 <- get_censo_escolar(2025, file = "Turma")
 }
 }
 \seealso{
-Other School Census functions: 
-\code{\link{list_censo_files}()}
+Other School Census functions:
+\code{\link[=list_censo_files]{list_censo_files()}}
 }
 \concept{School Census functions}

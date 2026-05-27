@@ -82,7 +82,7 @@ suppressPackageStartupMessages(library(textshaping))
 # # All enrollment data for 2018
 # mat_2018 <- get_fundeb_enrollment(year = 2018)
 # 
-# # Filter by state (applied at the API level for efficiency)
+# # Filter by state (filtered locally from cached complete dataset)
 # mat_sp <- get_fundeb_enrollment(year = 2018, uf = "SP")
 # 
 # # Limited rows for exploration
@@ -124,7 +124,7 @@ suppressPackageStartupMessages(library(textshaping))
 #       descricao_tipo_localizacao == "URBANA"     ~ "Urban",
 #       descricao_tipo_localizacao == "RURAL"      ~ "Rural",
 #       descricao_tipo_localizacao == "QUILOMBOLA" ~ "Quilombola",
-#       grepl("GENA", descricao_tipo_localizacao)  ~ "Indigenous",
+#       descricao_tipo_localizacao == "IND\u00cdGENA" ~ "Indigenous",
 #       .default = descricao_tipo_localizacao
 #     )
 #   ) |>

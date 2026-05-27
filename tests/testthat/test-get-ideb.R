@@ -129,6 +129,82 @@ test_that("read_ideb_excel errors when readxl not available", {
   )
 })
 
+# --- ideb_keep_cols: column projection (issue #1) ---
+
+test_that("ideb_keep_cols always keeps id columns regardless of metric", {
+  cols <- c("SG_UF", "CO_MUNICIPIO", "NO_MUNICIPIO", "REDE",
+            "VL_OBSERVADO_2017", "VL_OBSERVADO_2019")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "indicador")
+  expect_true(all(keep[1:4]))
+})
+
+test_that("ideb_keep_cols filters vl_* columns by metric=indicador", {
+  cols <- c("SG_UF", "REDE",
+            "VL_OBSERVADO_2019", "VL_INDICADOR_REND_2019", "VL_NOTA_MEDIA_2019",
+            "VL_APROVACAO_2019_1", "VL_NOTA_MATEMATICA_2019", "VL_PROJECAO_2019")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "indicador")
+  expect_equal(
+    cols[keep],
+    c("SG_UF", "REDE",
+      "VL_OBSERVADO_2019", "VL_INDICADOR_REND_2019", "VL_NOTA_MEDIA_2019")
+  )
+})
+
+test_that("ideb_keep_cols filters vl_* columns by metric=aprovacao", {
+  cols <- c("SG_UF",
+            "VL_APROVACAO_2019_1", "VL_APROVACAO_2019_SI_4",
+            "VL_OBSERVADO_2019", "VL_NOTA_MEDIA_2019")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "aprovacao")
+  expect_equal(cols[keep],
+               c("SG_UF", "VL_APROVACAO_2019_1", "VL_APROVACAO_2019_SI_4"))
+})
+
+test_that("ideb_keep_cols filters vl_* columns by metric=nota", {
+  cols <- c("SG_UF",
+            "VL_NOTA_MATEMATICA_2019", "VL_NOTA_PORTUGUES_2019",
+            "VL_NOTA_MEDIA_2019",  # this is "indicador", not "nota"
+            "VL_OBSERVADO_2019")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "nota")
+  expect_equal(cols[keep],
+               c("SG_UF", "VL_NOTA_MATEMATICA_2019", "VL_NOTA_PORTUGUES_2019"))
+})
+
+test_that("ideb_keep_cols filters vl_* columns by metric=meta", {
+  cols <- c("SG_UF",
+            "VL_PROJECAO_2019", "VL_PROJECAO_2021",
+            "VL_OBSERVADO_2019")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "meta")
+  expect_equal(cols[keep],
+               c("SG_UF", "VL_PROJECAO_2019", "VL_PROJECAO_2021"))
+})
+
+test_that("ideb_keep_cols further restricts by year when given", {
+  cols <- c("SG_UF",
+            "VL_OBSERVADO_2017", "VL_OBSERVADO_2019",
+            "VL_OBSERVADO_2021", "VL_OBSERVADO_2023")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "indicador",
+                                   year = c(2019, 2023))
+  expect_equal(cols[keep],
+               c("SG_UF", "VL_OBSERVADO_2019", "VL_OBSERVADO_2023"))
+})
+
+test_that("ideb_keep_cols year filter applies to aprovacao suffix columns", {
+  cols <- c("SG_UF",
+            "VL_APROVACAO_2017_1", "VL_APROVACAO_2019_SI_4",
+            "VL_APROVACAO_2021_3")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "aprovacao",
+                                   year = c(2019))
+  expect_equal(cols[keep], c("SG_UF", "VL_APROVACAO_2019_SI_4"))
+})
+
+test_that("ideb_keep_cols handles accented and mixed-case headers", {
+  # mirrors what INEP can publish: accented id columns
+  cols <- c("Sigla da UF", "Código do Município",
+            "VL_OBSERVADO_2023")
+  keep <- educabR:::ideb_keep_cols(cols, metric = "indicador")
+  expect_true(all(keep))  # all id + matching vl_
+})
+
 # --- build_ideb_url ---
 
 test_that("build_ideb_url builds correct URLs for escola/municipio", {
@@ -321,4 +397,102 @@ test_that("get_ideb_series emits deprecation warning", {
     ),
     "deprecated"
   )
+})
+
+# --- read_ideb_excel: normalization at all 3 branches ------------------------
+
+test_that("read_ideb_excel normalizes char cols in legacy path (metric = NULL)", {
+  skip_if_not_installed("readxl")
+
+  nfd <- "Pública"
+  nfc <- "Pública"
+
+  local_mocked_bindings(
+    read_excel = function(...) {
+      data.frame(
+        id_uf = "SP",
+        rede = c(nfd, "Federal"),
+        vl_observado_2023 = c("5.0", "6.1"),
+        stringsAsFactors = FALSE
+      )
+    },
+    .package = "readxl"
+  )
+
+  out <- educabR:::read_ideb_excel("dummy.xlsx")
+
+  expect_true(out$rede[1] == nfc)
+  expect_true(nfc %in% out$rede)
+})
+
+test_that("read_ideb_excel normalizes char cols in safety-fallback path", {
+  skip_if_not_installed("readxl")
+
+  nfd <- "Pública"
+  nfc <- "Pública"
+  call_n <- 0
+
+  local_mocked_bindings(
+    read_excel = function(...) {
+      call_n <<- call_n + 1
+      args <- list(...)
+      # pass 1: header only (n_max = 0) — return only id columns so
+      # ideb_keep_cols returns nothing matching the requested metric and
+      # the function falls into the safety branch.
+      if (!is.null(args$n_max) && args$n_max == 0) {
+        data.frame(id_uf = character(), rede = character(),
+                   stringsAsFactors = FALSE)
+      } else {
+        data.frame(
+          id_uf = "SP",
+          rede = c(nfd, "Federal"),
+          stringsAsFactors = FALSE
+        )
+      }
+    },
+    .package = "readxl"
+  )
+
+  out <- educabR:::read_ideb_excel("dummy.xlsx", metric = "indicador")
+
+  expect_true(out$rede[1] == nfc)
+  expect_true(nfc %in% out$rede)
+})
+
+test_that("read_ideb_excel normalizes char cols in optimized read path", {
+  skip_if_not_installed("readxl")
+
+  nfd <- "Pública"
+  nfc <- "Pública"
+
+  local_mocked_bindings(
+    read_excel = function(...) {
+      args <- list(...)
+      # pass 1: header only — return id cols plus an indicador column so
+      # ideb_keep_cols matches and the optimized branch is taken
+      if (!is.null(args$n_max) && args$n_max == 0) {
+        data.frame(
+          id_uf = character(),
+          rede = character(),
+          vl_observado_2023 = character(),
+          stringsAsFactors = FALSE
+        )
+      } else {
+        # pass 2: real data with NFD-form accents to verify normalization
+        data.frame(
+          id_uf = "SP",
+          rede = c(nfd, "Federal"),
+          vl_observado_2023 = c("5.0", "6.1"),
+          stringsAsFactors = FALSE
+        )
+      }
+    },
+    .package = "readxl"
+  )
+
+  out <- educabR:::read_ideb_excel("dummy.xlsx", metric = "indicador",
+                                   year = 2023)
+
+  expect_true(out$rede[1] == nfc)
+  expect_true(nfc %in% out$rede)
 })

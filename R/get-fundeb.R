@@ -236,8 +236,8 @@ fundeb_enrollment_col_names <- c(
 #'
 #' @param year The year of the data (2007-2026).
 #' @param uf Optional. A UF code (e.g., `"SP"`, `"RJ"`) to filter by state.
-#'   The filter is applied at the API level for efficiency. Default is `NULL`
-#'   (all states).
+#'   The complete dataset is always cached first, then filtered locally.
+#'   Default is `NULL` (all states).
 #' @param n_max Maximum number of rows to read. Default is `Inf` (all rows).
 #' @param keep_file Logical. If `TRUE`, caches the API result as a local CSV
 #'   file. Default is `TRUE`.
@@ -306,24 +306,29 @@ get_fundeb_enrollment <- function(year,
     )
   }
 
-  # check cache first
+  # check cache for the complete (unfiltered) dataset
   filename <- str_c("fundeb_enrollment_", year, ".csv")
-  file_path <- cache_path("fundeb", filename)
+  file_path <- cache_path("fundeb_enrollment", filename)
 
-  if (is_cached("fundeb", filename)) {
+  if (is_cached("fundeb_enrollment", filename)) {
     if (!quiet) {
       cli::cli_alert_success("using cached file")
       cli::cli_alert_info("reading FUNDEB enrollment data...")
     }
 
     delim <- detect_delim(file_path)
-    df <- read_inep_file(file_path, delim = delim, n_max = n_max)
+    df <- read_inep_file(file_path, delim = delim, quiet = quiet)
     df <- rename_fundeb_enrollment(df)
 
     # filter by UF locally on cached data
     if (!is.null(uf)) {
       uf <- toupper(uf)
       df <- df[toupper(df$uf) == uf, ]
+    }
+
+    # apply n_max after UF filter
+    if (!is.infinite(n_max) && nrow(df) > n_max) {
+      df <- df[seq_len(n_max), ]
     }
 
     validate_data(df, "fundeb_enrollment", year)
@@ -342,12 +347,14 @@ get_fundeb_enrollment <- function(year,
     cli::cli_alert_info("fetching FUNDEB enrollment {.val {year}} from FNDE API...")
   }
 
-  df <- fetch_fundeb_enrollment(year, uf = uf, n_max = n_max, quiet = quiet)
+  # always fetch the complete dataset (no UF filter) so we can cache it safely
+  df <- fetch_fundeb_enrollment(year, uf = NULL, n_max = Inf, quiet = quiet)
   df <- rename_fundeb_enrollment(df)
 
-  validate_data(df, "fundeb_enrollment", year)
+  # normalize before caching so 1st-call and cached-read paths agree on encoding
+  df <- normalize_utf8_nfc(df)
 
-  # cache as CSV for future use
+  # cache the complete dataset
   if (keep_file) {
     dir.create(dirname(file_path), recursive = TRUE, showWarnings = FALSE)
     readr::write_csv(df, file_path)
@@ -355,6 +362,19 @@ get_fundeb_enrollment <- function(year,
       cli::cli_alert_success("cached result as {.path {filename}}")
     }
   }
+
+  # filter by UF after caching
+  if (!is.null(uf)) {
+    uf <- toupper(uf)
+    df <- df[toupper(df$uf) == uf, ]
+  }
+
+  # apply n_max after UF filter
+  if (!is.infinite(n_max) && nrow(df) > n_max) {
+    df <- df[seq_len(n_max), ]
+  }
+
+  validate_data(df, "fundeb_enrollment", year)
 
   if (!quiet) {
     cli::cli_alert_success(

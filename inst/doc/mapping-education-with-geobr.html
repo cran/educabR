@@ -384,7 +384,7 @@ geobr.</p>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># Keep only public schools and the IDEB indicator</span></span>
 <span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>ideb_muni <span class="ot">&lt;-</span></span>
 <span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  ideb_muni <span class="sc">|&gt;</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;blica&quot;</span>, rede), indicador <span class="sc">==</span> <span class="st">&quot;IDEB&quot;</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="fu">filter</span>(rede <span class="sc">==</span> <span class="st">&quot;P\u00fablica&quot;</span>, indicador <span class="sc">==</span> <span class="st">&quot;IDEB&quot;</span>)</span>
 <span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>municipalities <span class="ot">&lt;-</span> <span class="fu">read_municipality</span>(<span class="at">year =</span> <span class="dv">2020</span>, <span class="at">showProgress =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>municipalities <span class="sc">|&gt;</span></span>

@@ -16,8 +16,8 @@ get_fundeb_enrollment(
 \item{year}{The year of the data (2007-2026).}
 
 \item{uf}{Optional. A UF code (e.g., \code{"SP"}, \code{"RJ"}) to filter by state.
-The filter is applied at the API level for efficiency. Default is \code{NULL}
-(all states).}
+The complete dataset is always cached first, then filtered locally.
+Default is \code{NULL} (all states).}
 
 \item{n_max}{Maximum number of rows to read. Default is \code{Inf} (all rows).}
 
@@ -78,7 +78,7 @@ mat_sample <- get_fundeb_enrollment(2023, n_max = 1000)
 }
 }
 \seealso{
-Other FUNDEB functions: 
-\code{\link{get_fundeb_distribution}()}
+Other FUNDEB functions:
+\code{\link[=get_fundeb_distribution]{get_fundeb_distribution()}}
 }
 \concept{FUNDEB functions}

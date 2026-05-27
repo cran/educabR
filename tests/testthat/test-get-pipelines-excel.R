@@ -24,7 +24,7 @@ test_that("get_ideb full pipeline works", {
       file.create(destfile)
       destfile
     },
-    read_ideb_excel = function(file, sheet = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
   )
 
@@ -61,7 +61,7 @@ test_that("get_ideb year filter returns only matching years", {
       file.create(destfile)
       destfile
     },
-    read_ideb_excel = function(file, sheet = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
   )
 
@@ -110,7 +110,7 @@ test_that("get_ideb uses cached file when it already exists", {
       download_called <<- TRUE
       destfile
     },
-    read_ideb_excel = function(file, sheet = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
   )
 
@@ -137,7 +137,7 @@ test_that("get_ideb_series delegates to get_ideb with deprecation warning", {
       file.create(destfile)
       destfile
     },
-    read_ideb_excel = function(file, sheet = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
   )
 
@@ -558,7 +558,7 @@ test_that("get_fundeb_enrollment reads cached CSV correctly", {
 
   # Write mock CSV to cache location
   filename <- "fundeb_enrollment_2018.csv"
-  file_path <- educabR:::cache_path("fundeb", filename)
+  file_path <- educabR:::cache_path("fundeb_enrollment", filename)
   dir.create(dirname(file_path), recursive = TRUE, showWarnings = FALSE)
   writeLines(mock_csv_content, file_path)
   withr::defer(unlink(file_path))
@@ -583,7 +583,7 @@ test_that("get_fundeb_enrollment filters by UF on cached data", {
   )
 
   filename <- "fundeb_enrollment_2018.csv"
-  file_path <- educabR:::cache_path("fundeb", filename)
+  file_path <- educabR:::cache_path("fundeb_enrollment", filename)
   dir.create(dirname(file_path), recursive = TRUE, showWarnings = FALSE)
   writeLines(mock_csv_content, file_path)
   withr::defer(unlink(file_path))
@@ -603,7 +603,7 @@ test_that("get_fundeb_enrollment respects n_max on cached data", {
   )
 
   filename <- "fundeb_enrollment_2018.csv"
-  file_path <- educabR:::cache_path("fundeb", filename)
+  file_path <- educabR:::cache_path("fundeb_enrollment", filename)
   dir.create(dirname(file_path), recursive = TRUE, showWarnings = FALSE)
   writeLines(paste(lines, collapse = "\n"), file_path)
   withr::defer(unlink(file_path))
@@ -633,7 +633,7 @@ test_that("get_fundeb_enrollment fetches from API when not cached", {
 
   # Ensure no cached file exists
   filename <- "fundeb_enrollment_2018.csv"
-  file_path <- educabR:::cache_path("fundeb", filename)
+  file_path <- educabR:::cache_path("fundeb_enrollment", filename)
   if (file.exists(file_path)) unlink(file_path)
   withr::defer(if (file.exists(file_path)) unlink(file_path))
 
@@ -669,7 +669,7 @@ test_that("get_fundeb_enrollment caches result when keep_file=TRUE", {
   )
 
   filename <- "fundeb_enrollment_2018.csv"
-  file_path <- educabR:::cache_path("fundeb", filename)
+  file_path <- educabR:::cache_path("fundeb_enrollment", filename)
   if (file.exists(file_path)) unlink(file_path)
   withr::defer(if (file.exists(file_path)) unlink(file_path))
 
@@ -968,7 +968,7 @@ test_that("get_ideb_series emits deprecation warning", {
       file.create(destfile)
       destfile
     },
-    read_ideb_excel = function(file, sheet = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
   )
 
