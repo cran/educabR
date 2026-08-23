@@ -18,13 +18,19 @@
 #'   - `"anos_iniciais"`: Early elementary (1st-5th grade)
 #'   - `"anos_finais"`: Late elementary (6th-9th grade)
 #'   - `"ensino_medio"`: High school
+#'   - `"ensino_medio_integrado"`: High school *including* students of
+#'     technical-professional education integrated to high school (EPT
+#'     integrada), a cut first published with IDEB 2025. Only available for
+#'     `level = "brasil"` or `"estado"`, and has no `metric = "meta"`.
 #' @param metric The type of data to return. **Required.**
 #'   - `"indicador"`: IDEB components (rendimento, nota padronizada, ideb)
 #'   - `"aprovacao"`: Approval rates by school year
 #'   - `"nota"`: SAEB scores by subject (math/portuguese)
-#'   - `"meta"`: IDEB targets/projections
+#'   - `"meta"`: IDEB targets/projections (not published for
+#'     `stage = "ensino_medio_integrado"`)
 #' @param year Optional. Integer vector of IDEB editions to filter
-#'   (e.g., `c(2019, 2021, 2023)`). `NULL` returns all available editions.
+#'   (e.g., `c(2021, 2023, 2025)`). `NULL` returns all available editions.
+#'   Note: official targets (`metric = "meta"`) are only defined through 2021.
 #' @param quiet Logical. If `TRUE`, suppresses progress messages.
 #'
 #' @return A tibble in tidy (long) format. Columns vary by `level` and `metric`:
@@ -52,7 +58,16 @@
 #' by 2022 (the level of developed countries in PISA).
 #'
 #' The function always downloads the most recent IDEB file available from
-#' INEP, which contains the full historical series (2005-2023).
+#' INEP, which contains the full historical series (2005-2025).
+#'
+#' `stage = "ensino_medio_integrado"` reads the "Ensino médio mais
+#' educação profissional técnica integrada" spreadsheets first
+#' published with IDEB 2025. Unlike the traditional high school IDEB — which
+#' excludes students of integrated technical-professional education (EPT
+#' integrada) from the SAEB performance component to preserve historical
+#' comparability — this cut includes them. INEP publishes it only at the
+#' national and state levels (state networks only), covering editions
+#' 2017-2025 for states and 2019-2025 for Brazil, with no official targets.
 #'
 #' @section Data source:
 #' Official IDEB portal: \url{https://www.gov.br/inep/pt-br/areas-de-atuacao/pesquisas-estatisticas-e-indicadores/ideb}
@@ -65,8 +80,8 @@
 #' # school-level IDEB indicators for early elementary
 #' ideb <- get_ideb("escola", "anos_iniciais", "indicador")
 #'
-#' # municipality-level approval rates, only 2021 and 2023
-#' aprov <- get_ideb("municipio", "anos_finais", "aprovacao", year = c(2021, 2023))
+#' # municipality-level approval rates, only 2023 and 2025
+#' aprov <- get_ideb("municipio", "anos_finais", "aprovacao", year = c(2023, 2025))
 #'
 #' # national IDEB targets
 #' metas <- get_ideb("brasil", "ensino_medio", "meta")
@@ -76,6 +91,9 @@
 #'
 #' # region-level IDEB indicators
 #' regioes <- get_ideb("regiao", "anos_finais", "indicador")
+#'
+#' # state-level IDEB including EPT integrada students (2025+ cut)
+#' emi <- get_ideb("estado", "ensino_medio_integrado", "indicador")
 #' }
 get_ideb <- function(level,
                      stage,
@@ -102,17 +120,40 @@ get_ideb <- function(level,
 
   # validate arguments
   level <- match.arg(level, c("escola", "municipio", "estado", "regiao", "brasil"))
-  stage <- match.arg(stage, c("anos_iniciais", "anos_finais", "ensino_medio"))
+  stage <- match.arg(
+    stage,
+    c("anos_iniciais", "anos_finais", "ensino_medio", "ensino_medio_integrado")
+  )
   metric <- match.arg(metric, c("indicador", "aprovacao", "nota", "meta"))
+
+  # ensino_medio_integrado: INEP only publishes brasil/UF files, no targets
+  if (stage == "ensino_medio_integrado") {
+    if (!level %in% c("brasil", "estado")) {
+      cli::cli_abort(
+        c(
+          "stage {.val ensino_medio_integrado} is only available for level {.val brasil} or {.val estado}",
+          "i" = "INEP publishes this cut only at the national and state levels"
+        )
+      )
+    }
+    if (metric == "meta") {
+      cli::cli_abort(
+        c(
+          "metric {.val meta} is not available for stage {.val ensino_medio_integrado}",
+          "i" = "INEP does not publish targets for this cut; use {.val indicador}, {.val aprovacao} or {.val nota}"
+        )
+      )
+    }
+  }
 
   # estado and regiao share the same file
   file_level <- if (level %in% c("estado", "regiao")) "regiao_uf" else level
 
-  # build url and download
+  # build url and download (2025+ files come zipped; cache holds the xlsx)
   ideb_year <- max(available_years("ideb"))
   url <- build_ideb_url(file_level, stage, ideb_year)
-  filename <- basename(url)
-  xlsx_path <- cache_path("ideb", filename)
+  xlsx_name <- sub("\\.zip$", ".xlsx", basename(url))
+  xlsx_path <- cache_path("ideb", xlsx_name)
 
   if (!file.exists(xlsx_path)) {
     if (!quiet) {
@@ -120,7 +161,7 @@ get_ideb <- function(level,
         "downloading IDEB - {.val {stage}} - {.val {level}}..."
       )
     }
-    download_inep_file(url, xlsx_path, quiet = quiet)
+    fetch_ideb_file(url, xlsx_path, quiet = quiet)
   } else if (!quiet) {
     cli::cli_alert_success("using cached file")
   }
@@ -182,7 +223,16 @@ get_ideb <- function(level,
 
   # filter by year if requested
   if (!is.null(year)) {
+    available_editions <- sort(unique(df$ano))
     df <- df[df$ano %in% year, ]
+    if (nrow(df) == 0) {
+      cli::cli_abort(
+        c(
+          "no IDEB data for year {.val {year}} with metric {.val {metric}}",
+          "i" = "editions available in this file: {.val {available_editions}}"
+        )
+      )
+    }
   }
 
   # validate data structure
@@ -212,6 +262,16 @@ get_ideb <- function(level,
 build_ideb_url <- function(level, stage, year) {
   base_url <- "https://download.inep.gov.br/ideb/resultados"
 
+  # ensino medio integrado: dedicated brasil/ufs files, always a direct xlsx
+  # (unlike the other 2025+ files, these are not zipped)
+  if (stage == "ensino_medio_integrado") {
+    level_url <- if (level == "brasil") "brasil" else "ufs"
+    filename <- str_c(
+      "divulgacao_", level_url, "_Ensino_Medio_integrado_ideb_", year, ".xlsx"
+    )
+    return(str_c(base_url, "/", filename))
+  }
+
   # map level names to url format
   level_url <- switch(
     level,
@@ -221,16 +281,67 @@ build_ideb_url <- function(level, stage, year) {
     "regiao_uf" = "regioes_ufs"
   )
 
+  # 2025+: INEP ships the spreadsheet inside a zip (xlsx + ods + md5)
+  ext <- if (year >= 2025) ".zip" else ".xlsx"
+
   # escola/municipio: separate files per stage
 
   # brasil/regiao_uf: single file with multiple sheets (no stage in filename)
   if (level %in% c("escola", "municipio")) {
-    filename <- str_c("divulgacao_", stage, "_", level_url, "_", year, ".xlsx")
+    filename <- str_c("divulgacao_", stage, "_", level_url, "_", year, ext)
   } else {
-    filename <- str_c("divulgacao_", level_url, "_ideb_", year, ".xlsx")
+    filename <- str_c("divulgacao_", level_url, "_ideb_", year, ext)
   }
 
   str_c(base_url, "/", filename)
+}
+
+#' Fetch the IDEB xlsx into cache
+#'
+#' @description
+#' Internal function to download the IDEB spreadsheet to `xlsx_path`. For
+#' 2023 and earlier, the URL points straight at the xlsx. From 2025 on,
+#' INEP packages the xlsx inside a zip (alongside an ods copy and an md5
+#' file); the zip is downloaded, the xlsx extracted into the cache, and
+#' the zip and extraction leftovers removed.
+#'
+#' @param url Download URL from [build_ideb_url()] (`.xlsx` or `.zip`).
+#' @param xlsx_path Cache destination for the xlsx.
+#' @param quiet Logical. If `TRUE`, suppresses progress messages.
+#'
+#' @return `xlsx_path`, invisibly.
+#'
+#' @keywords internal
+fetch_ideb_file <- function(url, xlsx_path, quiet = FALSE) {
+  if (!grepl("\\.zip$", url)) {
+    download_inep_file(url, xlsx_path, quiet = quiet)
+    return(invisible(xlsx_path))
+  }
+
+  zip_path <- file.path(dirname(xlsx_path), basename(url))
+  extract_dir <- file.path(
+    dirname(xlsx_path),
+    str_c(tools::file_path_sans_ext(basename(url)), "_extract")
+  )
+  on.exit(unlink(c(zip_path, extract_dir), recursive = TRUE), add = TRUE)
+
+  download_inep_file(url, zip_path, quiet = quiet)
+  extract_zip(zip_path, extract_dir, quiet = quiet)
+
+  inner <- list.files(
+    extract_dir, pattern = "\\.xlsx$", recursive = TRUE, full.names = TRUE
+  )
+  if (length(inner) == 0) {
+    cli::cli_abort(
+      c(
+        "no xlsx found inside downloaded IDEB archive {.file {basename(url)}}",
+        "i" = "INEP may have changed the archive layout"
+      )
+    )
+  }
+
+  file.copy(inner[[1]], xlsx_path, overwrite = TRUE)
+  invisible(xlsx_path)
 }
 
 #' Get IDEB Excel sheet name
@@ -247,6 +358,12 @@ build_ideb_url <- function(level, stage, year) {
 get_ideb_sheet <- function(level, stage) {
   if (level %in% c("escola", "municipio")) {
     return(NULL)
+  }
+
+  if (stage == "ensino_medio_integrado") {
+    return(
+      if (level == "brasil") "Brasil (EM_integrado)" else "UF (EM_integrado)"
+    )
   }
 
   if (level == "brasil") {
@@ -618,10 +735,14 @@ read_ideb_excel <- function(file, sheet = NULL, metric = NULL, year = NULL) {
     )))
   }
 
-  # pass 1: read header only to learn column names
-  header <- readxl::read_excel(
-    file, sheet = sheet, skip = 9, n_max = 0, col_types = "text"
-  )
+  # pass 1: read the header plus one data row to learn column names.
+  # n_max = 1 (not 0) because some sheets (e.g. regioes_ufs 2025 EM) leave
+  # the leading id columns without a header; with no data row readxl drops
+  # them entirely, misaligning col_types against the full sheet.
+  # suppressMessages: headerless columns trigger noisy name-repair messages
+  header <- suppressMessages(readxl::read_excel(
+    file, sheet = sheet, skip = 9, n_max = 1, col_types = "text"
+  ))
   keep <- ideb_keep_cols(names(header), metric = metric, year = year)
 
   # safety: if patterns matched nothing, fall back to reading everything
@@ -634,11 +755,23 @@ read_ideb_excel <- function(file, sheet = NULL, metric = NULL, year = NULL) {
 
   col_types <- ifelse(keep, "text", "skip")
 
-  # pass 2: read only the columns we need
-  normalize_utf8_nfc(readxl::read_excel(
-    file, sheet = sheet, skip = 9,
-    col_types = col_types, na = na_tokens
-  ))
+  # pass 2: read only the columns we need; if the projected read fails
+  # (e.g. the sheet's true width still disagrees with the header pass),
+  # fall back to reading the full sheet rather than erroring out
+  out <- tryCatch(
+    suppressMessages(readxl::read_excel(
+      file, sheet = sheet, skip = 9,
+      col_types = col_types, na = na_tokens
+    )),
+    error = function(e) {
+      suppressMessages(readxl::read_excel(
+        file, sheet = sheet, skip = 9,
+        col_types = "text", na = na_tokens
+      ))
+    }
+  )
+
+  normalize_utf8_nfc(out)
 }
 
 #' Decide which IDEB columns to keep for a given metric/year
@@ -769,10 +902,19 @@ list_ideb_available <- function() {
   stages <- c("anos_iniciais", "anos_finais", "ensino_medio")
   metrics <- c("indicador", "aprovacao", "nota", "meta")
 
-  tidyr::expand_grid(
+  base <- tidyr::expand_grid(
     level = levels,
     stage = stages,
     metric = metrics
-  ) |>
+  )
+
+  # ensino medio integrado (2025+): only brasil/estado, no published targets
+  emi <- tidyr::expand_grid(
+    level = c("brasil", "estado"),
+    stage = "ensino_medio_integrado",
+    metric = c("indicador", "aprovacao", "nota")
+  )
+
+  dplyr::bind_rows(base, emi) |>
     dplyr::arrange(.data$level, .data$stage, .data$metric)
 }

@@ -19,10 +19,14 @@ test_that("get_ideb full pipeline works", {
   )
 
   local_mocked_bindings(
-    download_inep_file = function(url, destfile, quiet = FALSE) {
-      dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
-      file.create(destfile)
-      destfile
+    # mock fetch_ideb_file (not download_inep_file): since IDEB 2025 the
+    # newest edition arrives zip-packaged, and an empty fake download would
+    # fail extraction — the zip mechanics have dedicated tests in
+    # test-get-ideb.R
+    fetch_ideb_file = function(url, xlsx_path, quiet = FALSE) {
+      dir.create(dirname(xlsx_path), recursive = TRUE, showWarnings = FALSE)
+      file.create(xlsx_path)
+      invisible(xlsx_path)
     },
     read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
@@ -56,10 +60,10 @@ test_that("get_ideb year filter returns only matching years", {
   )
 
   local_mocked_bindings(
-    download_inep_file = function(url, destfile, quiet = FALSE) {
-      dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
-      file.create(destfile)
-      destfile
+    fetch_ideb_file = function(url, xlsx_path, quiet = FALSE) {
+      dir.create(dirname(xlsx_path), recursive = TRUE, showWarnings = FALSE)
+      file.create(xlsx_path)
+      invisible(xlsx_path)
     },
     read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
@@ -132,10 +136,10 @@ test_that("get_ideb_series delegates to get_ideb with deprecation warning", {
   )
 
   local_mocked_bindings(
-    download_inep_file = function(url, destfile, quiet = FALSE) {
-      dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
-      file.create(destfile)
-      destfile
+    fetch_ideb_file = function(url, xlsx_path, quiet = FALSE) {
+      dir.create(dirname(xlsx_path), recursive = TRUE, showWarnings = FALSE)
+      file.create(xlsx_path)
+      invisible(xlsx_path)
     },
     read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"
@@ -963,10 +967,10 @@ test_that("get_ideb_series emits deprecation warning", {
   )
 
   local_mocked_bindings(
-    download_inep_file = function(url, destfile, quiet = FALSE) {
-      dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
-      file.create(destfile)
-      destfile
+    fetch_ideb_file = function(url, xlsx_path, quiet = FALSE) {
+      dir.create(dirname(xlsx_path), recursive = TRUE, showWarnings = FALSE)
+      file.create(xlsx_path)
+      invisible(xlsx_path)
     },
     read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
     .package = "educabR"

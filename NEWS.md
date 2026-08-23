@@ -1,3 +1,35 @@
+# educabR 1.1.0
+
+## New features
+
+* `get_ideb()` now supports the IDEB 2025 edition (released 2026-08-05). INEP
+  changed the packaging for 2025: spreadsheets now come inside a `.zip`
+  archive, which the pipeline downloads and extracts transparently. The
+  cached file remains the inner `.xlsx`, so existing cache handling is
+  unchanged.
+
+* `get_ideb()` gains `stage = "ensino_medio_integrado"`, covering the
+  "Ensino médio mais educação profissional técnica integrada" spreadsheets
+  first published with IDEB 2025 — high school IDEB *including* students of
+  integrated technical-professional education (EPT integrada), which the
+  traditional high school cut excludes for historical comparability. INEP
+  publishes this cut only for `level = "brasil"` (editions 2019-2025) and
+  `level = "estado"` (2017-2025), state networks only, with no official
+  targets (`metric = "meta"` is rejected with a clear error).
+  `list_ideb_available()` now lists these combinations.
+
+## Bug fixes
+
+* `get_ideb()` now raises a clear error when the `year` filter matches no
+  IDEB edition (listing the editions actually present in the file), instead
+  of the misleading "file may be corrupted" message.
+
+* Dynamic year discovery no longer removes known years from
+  `available_years()` when a verification request fails transiently — a
+  network hiccup could make a valid year (e.g. 2022 for the Censo Escolar)
+  unavailable for the whole session (#17). Discovery now only *adds* newly
+  published years to the known list.
+
 # educabR 1.0.0
 
 ## Breaking changes

@@ -760,7 +760,7 @@ indicador
 <tfoot>
 <tr>
 <td style="padding: 0; " colspan="100%">
-<sup></sup> Showing 10 of 60 available combinations
+<sup></sup> Showing 10 of 66 available combinations
 </td>
 </tr>
 </tfoot>
@@ -784,10 +784,18 @@ indicador
 <span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  <span class="at">year   =</span> <span class="dv">2023</span></span>
 <span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>)</span>
 <span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co"># Filter by state after downloading</span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>ideb_sp <span class="ot">&lt;-</span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>  ideb_schools <span class="sc">|&gt;</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(uf_sigla <span class="sc">==</span> <span class="st">&quot;SP&quot;</span>)</span></code></pre></div>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co"># IDEB by state - High school including EPT integrada students</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co"># (cut first published with IDEB 2025; brasil/estado levels only, no &quot;meta&quot;)</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>ideb_emi <span class="ot">&lt;-</span> <span class="fu">get_ideb</span>(</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>  <span class="at">level  =</span> <span class="st">&quot;estado&quot;</span>,</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>  <span class="at">stage  =</span> <span class="st">&quot;ensino_medio_integrado&quot;</span>,</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>  <span class="at">metric =</span> <span class="st">&quot;indicador&quot;</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>)</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co"># Filter by state after downloading</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>ideb_sp <span class="ot">&lt;-</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>  ideb_schools <span class="sc">|&gt;</span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(uf_sigla <span class="sc">==</span> <span class="st">&quot;SP&quot;</span>)</span></code></pre></div>
 </div>
 <div id="data-structure" class="section level3">
 <h3>Data structure</h3>

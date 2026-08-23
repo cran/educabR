@@ -21,6 +21,10 @@ get_ideb(level, stage, metric, year = NULL, quiet = FALSE)
 \item \code{"anos_iniciais"}: Early elementary (1st-5th grade)
 \item \code{"anos_finais"}: Late elementary (6th-9th grade)
 \item \code{"ensino_medio"}: High school
+\item \code{"ensino_medio_integrado"}: High school \emph{including} students of
+technical-professional education integrated to high school (EPT
+integrada), a cut first published with IDEB 2025. Only available for
+\code{level = "brasil"} or \code{"estado"}, and has no \code{metric = "meta"}.
 }}
 
 \item{metric}{The type of data to return. \strong{Required.}
@@ -28,11 +32,13 @@ get_ideb(level, stage, metric, year = NULL, quiet = FALSE)
 \item \code{"indicador"}: IDEB components (rendimento, nota padronizada, ideb)
 \item \code{"aprovacao"}: Approval rates by school year
 \item \code{"nota"}: SAEB scores by subject (math/portuguese)
-\item \code{"meta"}: IDEB targets/projections
+\item \code{"meta"}: IDEB targets/projections (not published for
+\code{stage = "ensino_medio_integrado"})
 }}
 
 \item{year}{Optional. Integer vector of IDEB editions to filter
-(e.g., \code{c(2019, 2021, 2023)}). \code{NULL} returns all available editions.}
+(e.g., \code{c(2021, 2023, 2025)}). \code{NULL} returns all available editions.
+Note: official targets (\code{metric = "meta"}) are only defined through 2021.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppresses progress messages.}
 }
@@ -72,7 +78,16 @@ The index ranges from 0 to 10. Brazil's national goal is to reach 6.0
 by 2022 (the level of developed countries in PISA).
 
 The function always downloads the most recent IDEB file available from
-INEP, which contains the full historical series (2005-2023).
+INEP, which contains the full historical series (2005-2025).
+
+\code{stage = "ensino_medio_integrado"} reads the "Ensino médio mais
+educação profissional técnica integrada" spreadsheets first
+published with IDEB 2025. Unlike the traditional high school IDEB — which
+excludes students of integrated technical-professional education (EPT
+integrada) from the SAEB performance component to preserve historical
+comparability — this cut includes them. INEP publishes it only at the
+national and state levels (state networks only), covering editions
+2017-2025 for states and 2019-2025 for Brazil, with no official targets.
 }
 \section{Data source}{
 
@@ -84,8 +99,8 @@ Official IDEB portal: \url{https://www.gov.br/inep/pt-br/areas-de-atuacao/pesqui
 # school-level IDEB indicators for early elementary
 ideb <- get_ideb("escola", "anos_iniciais", "indicador")
 
-# municipality-level approval rates, only 2021 and 2023
-aprov <- get_ideb("municipio", "anos_finais", "aprovacao", year = c(2021, 2023))
+# municipality-level approval rates, only 2023 and 2025
+aprov <- get_ideb("municipio", "anos_finais", "aprovacao", year = c(2023, 2025))
 
 # national IDEB targets
 metas <- get_ideb("brasil", "ensino_medio", "meta")
@@ -95,6 +110,9 @@ notas <- get_ideb("estado", "anos_iniciais", "nota")
 
 # region-level IDEB indicators
 regioes <- get_ideb("regiao", "anos_finais", "indicador")
+
+# state-level IDEB including EPT integrada students (2025+ cut)
+emi <- get_ideb("estado", "ensino_medio_integrado", "indicador")
 }
 }
 \seealso{

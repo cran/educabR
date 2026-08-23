@@ -74,6 +74,14 @@ df[1:10, ] |>
 #   year   = 2023
 # )
 # 
+# # IDEB by state - High school including EPT integrada students
+# # (cut first published with IDEB 2025; brasil/estado levels only, no "meta")
+# ideb_emi <- get_ideb(
+#   level  = "estado",
+#   stage  = "ensino_medio_integrado",
+#   metric = "indicador"
+# )
+# 
 # # Filter by state after downloading
 # ideb_sp <-
 #   ideb_schools |>

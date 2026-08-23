@@ -84,7 +84,7 @@ remotes::install_github("SidneyBissoli/educabR")
 
 | Dataset | Function | Available Years |
 |---------|----------|-----------------|
-| IDEB - Basic Education Development Index | `get_ideb()`, `get_ideb_series()` | 2017, 2019, 2021, 2023 |
+| IDEB - Basic Education Development Index | `get_ideb()`, `get_ideb_series()` | 2017, 2019, 2021, 2023, 2025 |
 | ENEM - National High School Exam | `get_enem()`, `get_enem_itens()` | 1998-2024 |
 | School Census | `get_censo_escolar()` | 1995-2024 |
 | SAEB - Basic Education Assessment System | `get_saeb()` | 2011-2023 (biennial) |
@@ -121,18 +121,26 @@ remotes::install_github("SidneyBissoli/educabR")
 ```r
 library(educabR)
 
-# Download IDEB 2021 - Early elementary - Schools
+# School-level IDEB indicators - early elementary (all editions, long format)
 ideb <- get_ideb(
-  year  = 2021,
-  stage = "anos_iniciais",
-  level = "escola"
+  level  = "escola",
+  stage  = "anos_iniciais",
+  metric = "indicador"
 )
 
-# Historical series
-ideb_series <- get_ideb_series(
-  years = c(2017, 2019, 2021, 2023),
-  level = "municipio",
-  stage = "anos_iniciais"
+# Municipality-level approval rates, filtered to the 2021 and 2023 editions
+aprov <- get_ideb(
+  level  = "municipio",
+  stage  = "anos_finais",
+  metric = "aprovacao",
+  year   = c(2021, 2023)
+)
+
+# State-level IDEB including EPT integrada students (cut published from IDEB 2025)
+emi <- get_ideb(
+  level  = "estado",
+  stage  = "ensino_medio_integrado",
+  metric = "indicador"
 )
 ```
 
@@ -229,6 +237,10 @@ clear_cache()
 - [Higher education](https://sidneybissoli.github.io/educabR/articles/higher-education.html)
 - [Education funding](https://sidneybissoli.github.io/educabR/articles/education-funding.html)
 - [Mapping education indicators with geobr](https://sidneybissoli.github.io/educabR/articles/mapping-education-with-geobr.html)
+
+## Acknowledgements
+
+An earlier R package with the same name, focused on importing IDEB data, was developed by [Rodrigo Borges](https://github.com/rodrigoesborges/educabR).
 
 ## License
 
