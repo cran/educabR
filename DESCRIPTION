@@ -1,6 +1,6 @@
 Package: educabR
 Title: Download and Process Brazilian Education Data from INEP
-Version: 1.1.0
+Version: 1.2.0
 Authors@R: 
     person("Sidney da Silva Pereira", "Bissoli", 
            email = "sbissoli76@gmail.com", 
@@ -36,9 +36,9 @@ Suggests: ggplot2, jsonlite, kableExtra, knitr, readxl, rmarkdown,
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2026-08-22 21:23:25 UTC; SIDNEY
+Packaged: 2026-10-03 02:42:23 UTC; SIDNEY
 Author: Sidney da Silva Pereira Bissoli [aut, cre] (ORCID:
     <https://orcid.org/0009-0001-0442-3700>)
 Maintainer: Sidney da Silva Pereira Bissoli <sbissoli76@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-08-23 11:10:02 UTC
+Date/Publication: 2026-10-03 03:10:02 UTC

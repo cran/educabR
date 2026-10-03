@@ -178,21 +178,32 @@ test_that("get_encceja full pipeline works with cached data", {
     dataset_subdir = "encceja",
     zip_filename = "microdados_encceja_2023.zip",
     exdir_name = "microdados_encceja_2023",
-    csv_filename = "MICRODADOS_ENCCEJA_2023.csv",
+    csv_filename = "MICRODADOS_ENCCEJA_2023_REG_NAC.csv",
     header = "NU_INSCRICAO;NU_ANO;TP_SEXO;CO_MUNICIPIO_RESIDENCIA;TP_COR_RACA",
     rows = c(
       "300001;2023;1;3550308;1",
       "300002;2023;2;3304557;2"
     )
   )
+  # the PPL file sorts before REG_NAC; it must not be picked by default
+  writeLines(
+    c(
+      "NU_INSCRICAO;NU_ANO;TP_SEXO;CO_MUNICIPIO_RESIDENCIA;TP_COR_RACA",
+      "900001;2023;1;3550308;1"
+    ),
+    file.path(temp_cache, "encceja", "microdados_encceja_2023",
+              "MICRODADOS_ENCCEJA_2023_PPL_NAC.csv")
+  )
 
   result <- get_encceja(2023, quiet = TRUE, n_max = 10)
 
   expect_s3_class(result, "tbl_df")
-  expect_true(nrow(result) > 0)
+  expect_equal(result$nu_inscricao, c(300001, 300002))
   expect_true(all(names(result) == tolower(names(result))))
-  expect_true("nu_inscricao" %in% names(result))
   expect_true("co_municipio_residencia" %in% names(result))
+
+  ppl <- get_encceja(2023, type = "ppl", quiet = TRUE, n_max = 10)
+  expect_equal(ppl$nu_inscricao, 900001)
 })
 
 # --------------------------------------------------------------------------
@@ -214,16 +225,30 @@ test_that("get_saeb full pipeline works for aluno type", {
       "1;1001;250.5;230.2;2023",
       "2;1002;280.1;260.8;2023"
     ),
-    file.path(exdir, "TS_ALUNO_2023.csv")
+    file.path(exdir, "TS_ALUNO_5EF.csv")
+  )
+  writeLines(
+    c(
+      "ID_SAEB;ID_ALUNO;PROFICIENCIA_MT;PROFICIENCIA_LP;NU_ANO_SAEB",
+      "3;2001;150.5;140.2;2023"
+    ),
+    file.path(exdir, "TS_ALUNO_2EF.csv")
   )
 
-  result <- get_saeb(2023, type = "aluno", quiet = TRUE, n_max = 10)
+  result <- get_saeb(2023, type = "aluno", serie = 5, quiet = TRUE,
+                     n_max = 10)
 
   expect_s3_class(result, "tbl_df")
-  expect_true(nrow(result) > 0)
+  expect_equal(nrow(result), 2)
   expect_true(all(names(result) == tolower(names(result))))
   expect_true("id_saeb" %in% names(result))
-  expect_true("id_aluno" %in% names(result))
+  expect_equal(result$id_aluno, c(1001, 1002))
+
+  # several grades and no serie: abort instead of loading one silently
+  expect_error(
+    get_saeb(2023, type = "aluno", quiet = TRUE, n_max = 10),
+    "choose one with"
+  )
 })
 
 test_that("get_saeb full pipeline works for escola type", {

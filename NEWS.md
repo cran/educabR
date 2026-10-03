@@ -1,3 +1,44 @@
+# educabR 1.2.0
+
+This release fixes two bugs that returned the **wrong data without any
+error or warning**. If you used `get_saeb(type = "aluno")` or
+`get_encceja()` with educabR 1.1.0 or earlier, please re-check your
+results: see the first two items below.
+
+## Bug fixes
+
+* `get_saeb()` gains a `serie` argument and no longer loads the wrong
+  grade silently (#21). Since 2013 INEP ships one student file per grade
+  (`TS_ALUNO_2EF.csv`, `TS_ALUNO_5EF.csv`, `TS_ALUNO_9EF.csv`, ...), and
+  `type = "aluno"` used to read whichever came first alphabetically: the
+  2nd grade in 2019-2023, the 3rd year of high school in 2013-2017, so
+  the 5th and 9th grades were unreachable in every edition. Now
+  `serie = "5ef"` (or `5`) picks the file by exact name; when an edition
+  has several grades and `serie` is missing, `get_saeb()` stops and lists
+  them. For 2011, `type = "aluno"` now reads `TS_RESULTADO_ALUNO`
+  (proficiency results) instead of the student questionnaire.
+* `get_encceja()` gains `type = c("regular", "ppl")` and now reads the
+  national regular exam by default. Each edition ships a regular file
+  (`REG_NAC` / `REGULAR`, 260-940 MB) and a much smaller file for people
+  deprived of liberty (`PPL_NAC` / `PPL`), and `get_encceja()` used to
+  load whichever matched first: the PPL file in 2014, 2017-2020 and
+  2022-2025. `type = "ppl"` keeps that file reachable.
+* ENCCEJA years now exclude 2015, 2016 and 2021: INEP published no
+  microdata for those editions (the download URLs return 404), so
+  `get_encceja()` rejects them up front instead of failing at download.
+
+## New features
+
+* `get_enem()` and `get_enem_itens()` now support the 2025 edition,
+  published by INEP in 2026. The 2025 zip keeps the split layout
+  introduced in 2024 (`PARTICIPANTES_2025.csv`, `RESULTADOS_2025.csv`,
+  `ITENS_PROVA_2025.csv`), so only the known-years list changed.
+* `get_encceja()` now supports the 2025 edition (same file set as 2024:
+  `REG_NAC`, `PPL_NAC`, `PPL_NAC_QSE`, `ITENS_PROVA`).
+
+Both editions were detected by the portfolio source monitor and
+validated against the live INEP files.
+
 # educabR 1.1.0
 
 ## New features

@@ -15,7 +15,7 @@ test_that("validate_year rejects invalid ENCCEJA years", {
   )
 
   expect_error(
-    validate_year(2025, "encceja"),
+    validate_year(2026, "encceja"),
     "not available"
   )
 })
@@ -31,8 +31,17 @@ test_that("fallback_years returns expected ENCCEJA years", {
   expect_true(2014 %in% years)
   expect_true(2023 %in% years)
   expect_true(2024 %in% years)
+  expect_true(2025 %in% years)
   expect_false(2013 %in% years)
-  expect_equal(length(years), 11)
+  # no microdata published for 2015, 2016 and 2021 (404 at INEP)
+  expect_false(any(c(2015, 2016, 2021) %in% years))
+  expect_equal(length(years), 9)
+})
+
+test_that("validate_year rejects ENCCEJA years INEP never published", {
+  for (y in c(2015, 2016, 2021)) {
+    expect_error(validate_year(y, "encceja"), "not available")
+  }
 })
 
 # --- build_inep_url ---
@@ -83,7 +92,7 @@ test_that("get_encceja rejects invalid year", {
   )
 
   expect_error(
-    get_encceja(2025),
+    get_encceja(2026),
     "not available"
   )
 })

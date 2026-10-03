@@ -15,21 +15,28 @@ suppressPackageStartupMessages(library(textshaping))
 # library(ggplot2)
 
 ## ----saeb-download------------------------------------------------------------
-# # Student performance data
-# saeb_students <- get_saeb(year = 2023, type = "aluno")
+# # Student performance data, 5th grade
+# saeb_5ef <- get_saeb(year = 2023, type = "aluno", serie = "5ef")
 # 
 # # School questionnaire
 # saeb_schools <- get_saeb(year = 2023, type = "escola")
 # 
 # # Use n_max for exploration
-# saeb_sample <- get_saeb(year = 2023, type = "aluno", n_max = 5000)
+# saeb_sample <- get_saeb(year = 2023, serie = 9, n_max = 5000)
+# 
+# # Several grades: one call per grade (columns differ between grades;
+# # the 5th and 9th grade files are about 1 GB of CSV each)
+# saeb_ef <- purrr::map(c("5ef", "9ef"), function(s) {
+#   get_saeb(year = 2023, serie = s)
+# })
 
 ## ----saeb-years---------------------------------------------------------------
 # # 2021 data is split by education level
 # saeb_fund <- get_saeb(
 #   year  = 2021,
 #   type  = "aluno",
-#   level = "fundamental_medio"
+#   level = "fundamental_medio",
+#   serie = "9ef"
 # )
 # 
 # saeb_infantil <- get_saeb(
@@ -39,8 +46,8 @@ suppressPackageStartupMessages(library(textshaping))
 # )
 
 ## ----saeb-analysis------------------------------------------------------------
-# # Explore student scores
-# saeb_sample <- get_saeb(2023, type = "aluno", n_max = 10000)
+# # Explore student scores (2nd grade of elementary school)
+# saeb_sample <- get_saeb(2023, type = "aluno", serie = "2ef", n_max = 10000)
 # 
 # # Score distribution by subject
 # saeb_sample |>
@@ -48,7 +55,7 @@ suppressPackageStartupMessages(library(textshaping))
 #   ggplot(aes(x = proficiencia_mt)) +
 #   geom_histogram(bins = 50, fill = "steelblue", alpha = 0.7) +
 #   labs(
-#     title = "SAEB 2023 - Mathematics Proficiency Distribution",
+#     title = "SAEB 2023 - Mathematics Proficiency Distribution (2nd grade)",
 #     x     = "Mathematics Score",
 #     y     = "Count"
 #   ) +
@@ -60,6 +67,9 @@ suppressPackageStartupMessages(library(textshaping))
 # 
 # # Sample for exploration
 # encceja_sample <- get_encceja(year = 2023, n_max = 5000)
+# 
+# # Participants deprived of liberty (PPL) come in a separate file
+# encceja_ppl <- get_encceja(year = 2023, type = "ppl")
 
 ## ----encceja-structure--------------------------------------------------------
 # # Explore the data structure
