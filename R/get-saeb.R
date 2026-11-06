@@ -15,6 +15,10 @@
 #'   - `"escola"`: School questionnaire
 #'   - `"diretor"`: Principal questionnaire
 #'   - `"professor"`: Teacher questionnaire
+#'   - `"secretario"`: Municipal education secretary questionnaire
+#'     (`TS_SECRETARIO_MUNICIPAL`, 2019 onwards). For the 2021 early
+#'     childhood level (`level = "educacao_infantil"`) INEP publishes only
+#'     this file and `TS_EDUCACAO_INFANTIL` (read with `type = "aluno"`).
 #' @param level For 2021 only, SAEB was split into two files:
 #'   - `"fundamental_medio"`: Elementary and High School (default)
 #'   - `"educacao_infantil"`: Early Childhood Education
@@ -85,13 +89,15 @@
 #' # SAEB 2021: early childhood education
 #' saeb_infantil <- get_saeb(2021, level = "educacao_infantil", n_max = 1000)
 #' }
-get_saeb <- function(year,
-                     type = c("aluno", "escola", "diretor", "professor"),
-                     level = c("fundamental_medio", "educacao_infantil"),
-                     serie = NULL,
-                     n_max = Inf,
-                     keep_zip = TRUE,
-                     quiet = FALSE) {
+get_saeb <- function(
+  year,
+  type = c("aluno", "escola", "diretor", "professor", "secretario"),
+  level = c("fundamental_medio", "educacao_infantil"),
+  serie = NULL,
+  n_max = Inf,
+  keep_zip = TRUE,
+  quiet = FALSE
+) {
   # validate arguments
   validate_year(year, "saeb")
   type <- match.arg(type)
@@ -207,7 +213,8 @@ build_saeb_zip_filename <- function(year, level = "fundamental_medio") {
 #'
 #' @param exdir The extraction directory.
 #' @param year The year.
-#' @param type The data type ("aluno", "escola", "diretor", "professor").
+#' @param type The data type ("aluno", "escola", "diretor", "professor",
+#'   "secretario").
 #' @param serie For `"aluno"`, the normalized grade code (e.g. `"5ef"`), or
 #'   `NULL`.
 #'
@@ -244,12 +251,17 @@ find_saeb_file <- function(exdir, year, type = "aluno", serie = NULL) {
       "ALUNO",
       "MICRODADOS_SAEB"
     ),
+    # the municipal secretary questionnaire is its own type: it used to be
+    # the fallback of "escola", so get_saeb(2021, "escola", level =
+    # "educacao_infantil") returned the secretary file under a school label
     "escola" = c(
       str_c("TS_ESCOLA_", year),
       "TS_ESCOLA",
-      str_c("TS_SECRETARIO_MUNICIPAL_", year),
-      "TS_SECRETARIO_MUNICIPAL",
       "ESCOLA"
+    ),
+    "secretario" = c(
+      str_c("TS_SECRETARIO_MUNICIPAL_", year),
+      "TS_SECRETARIO_MUNICIPAL"
     ),
     "diretor" = c(
       str_c("TS_DIRETOR_", year),
@@ -277,9 +289,16 @@ find_saeb_file <- function(exdir, year, type = "aluno", serie = NULL) {
     }
   }
 
+  present <- basename(list.files(
+    exdir,
+    pattern = "\\.csv$",
+    recursive = TRUE,
+    ignore.case = TRUE
+  ))
   cli::cli_abort(
     c(
       "no SAEB {.val {type}} data file found for {.val {year}}",
+      "i" = "files in this edition: {.val {present}}",
       "i" = "directory: {.path {exdir}}"
     )
   )

@@ -12,8 +12,11 @@
 #' @param type Type of data to load. Options:
 #'   - `"ies"`: Higher education institutions (default)
 #'   - `"cursos"`: Undergraduate courses
-#'   - `"alunos"`: Student enrollment
-#'   - `"docentes"`: Faculty/professors
+#'   - `"alunos"`, `"docentes"`: `r lifecycle::badge("deprecated")` INEP no
+#'     longer publishes student or faculty microdata (withdrawn under the
+#'     LGPD); the archive of every year (2009-2024) holds only the IES and
+#'     course files. These options now stop with an explanation. Course-level
+#'     counts of students and faculty are in `type = "cursos"`.
 #' @param uf Optional. Filter by state (UF code or abbreviation).
 #' @param n_max Maximum number of rows to read. Default is `Inf` (all rows).
 #'   Consider using a smaller value for exploration.
@@ -66,15 +69,26 @@
 #' # get faculty data
 #' docentes <- get_censo_superior(2023, type = "docentes")
 #' }
-get_censo_superior <- function(year,
-                               type = c("ies", "cursos", "alunos", "docentes"),
-                               uf = NULL,
-                               n_max = Inf,
-                               keep_zip = TRUE,
-                               quiet = FALSE) {
+get_censo_superior <- function(
+  year,
+  type = c("ies", "cursos", "alunos", "docentes"),
+  uf = NULL,
+  n_max = Inf,
+  keep_zip = TRUE,
+  quiet = FALSE
+) {
   # validate arguments
   validate_year(year, "censo_superior")
   type <- match.arg(type)
+
+  # INEP's archive has only IES and course files (checked for 2009-2024)
+  if (type %in% c("alunos", "docentes")) {
+    cli::cli_abort(c(
+      "INEP no longer publishes {.val {type}} microdata of the Higher Education Census",
+      "i" = "the files were withdrawn under the LGPD; every year's archive holds only the IES and course files",
+      "i" = "course-level counts are in {.code get_censo_superior({year}, type = \"cursos\")}"
+    ))
+  }
 
   # build url and file paths
   url <- build_inep_url("censo_superior", year)
@@ -110,7 +124,9 @@ get_censo_superior <- function(year,
   data_file <- find_censo_superior_file(exdir, year, type)
 
   if (!quiet) {
-    cli::cli_alert_info("reading Higher Education Census data ({.val {type}})...")
+    cli::cli_alert_info(
+      "reading Higher Education Census data ({.val {type}})..."
+    )
     if (is.infinite(n_max) && type == "alunos") {
       cli::cli_alert_warning(
         "student files can be very large. use {.arg n_max} to limit rows if needed."
@@ -125,7 +141,12 @@ get_censo_superior <- function(year,
   read_max <- if (!is.null(uf)) Inf else n_max
 
   # read the file
-  df <- read_inep_file(data_file, delim = delim, n_max = read_max, quiet = quiet)
+  df <- read_inep_file(
+    data_file,
+    delim = delim,
+    n_max = read_max,
+    quiet = quiet
+  )
 
   # standardize column names
   df <- standardize_names(df)

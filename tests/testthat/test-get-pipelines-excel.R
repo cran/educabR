@@ -28,7 +28,9 @@ test_that("get_ideb full pipeline works", {
       file.create(xlsx_path)
       invisible(xlsx_path)
     },
-    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) {
+      mock_data
+    },
     .package = "educabR"
   )
 
@@ -65,12 +67,19 @@ test_that("get_ideb year filter returns only matching years", {
       file.create(xlsx_path)
       invisible(xlsx_path)
     },
-    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) {
+      mock_data
+    },
     .package = "educabR"
   )
 
-  result <- get_ideb("municipio", "anos_iniciais", "indicador",
-                     year = 2021, quiet = TRUE)
+  result <- get_ideb(
+    "municipio",
+    "anos_iniciais",
+    "indicador",
+    year = 2021,
+    quiet = TRUE
+  )
 
   # Only 2021 should be returned
   expect_true(all(result$ano == 2021))
@@ -114,7 +123,9 @@ test_that("get_ideb uses cached file when it already exists", {
       download_called <<- TRUE
       destfile
     },
-    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) {
+      mock_data
+    },
     .package = "educabR"
   )
 
@@ -141,7 +152,9 @@ test_that("get_ideb_series delegates to get_ideb with deprecation warning", {
       file.create(xlsx_path)
       invisible(xlsx_path)
     },
-    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) {
+      mock_data
+    },
     .package = "educabR"
   )
 
@@ -271,7 +284,8 @@ test_that("get_igc full pipeline works for non-archive year", {
       file.create(destfile)
       destfile
     },
-    read_excel_safe = function(file, n_max = Inf) mock_igc,
+    read_excel_safe = function(file, n_max = Inf, sheet = 1) mock_igc,
+    igc_institution_sheets = function(file) "IGC",
     .package = "educabR"
   )
 
@@ -302,7 +316,8 @@ test_that("get_igc with keep_file=FALSE removes cached file", {
       file.create(destfile)
       destfile
     },
-    read_excel_safe = function(file, n_max = Inf) mock_igc,
+    read_excel_safe = function(file, n_max = Inf, sheet = 1) mock_igc,
+    igc_institution_sheets = function(file) "IGC",
     .package = "educabR"
   )
 
@@ -340,7 +355,8 @@ test_that("get_igc handles 7z archive year", {
       file.create(mock_xlsx)
       mock_xlsx
     },
-    read_excel_safe = function(file, n_max = Inf) mock_igc,
+    read_excel_safe = function(file, n_max = Inf, sheet = 1) mock_igc,
+    igc_institution_sheets = function(file) "IGC",
     .package = "educabR"
   )
 
@@ -351,7 +367,7 @@ test_that("get_igc handles 7z archive year", {
   expect_true(all(names(result) == tolower(names(result))))
 })
 
-test_that("get_igc 7z errors when no excel file in extracted archive", {
+test_that("get_igc 7z errors when no data file in extracted archive", {
   local_mocked_bindings(
     download_inep_file = function(url, destfile, quiet = FALSE) {
       dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
@@ -359,7 +375,7 @@ test_that("get_igc 7z errors when no excel file in extracted archive", {
       destfile
     },
     extract_archive = function(archive, exdir, quiet = FALSE) {
-      # Create exdir but no excel files
+      # Create exdir but no data files
       dir.create(exdir, recursive = TRUE, showWarnings = FALSE)
       file.create(file.path(exdir, "readme.txt"))
       file.path(exdir, "readme.txt")
@@ -369,14 +385,16 @@ test_that("get_igc 7z errors when no excel file in extracted archive", {
 
   # Clean up any existing extracted directory
   exdir <- educabR:::cache_path("igc", "igc_2007")
-  if (dir.exists(exdir)) unlink(exdir, recursive = TRUE)
+  if (dir.exists(exdir)) {
+    unlink(exdir, recursive = TRUE)
+  }
   withr::defer({
     if (dir.exists(exdir)) unlink(exdir, recursive = TRUE)
   })
 
   expect_error(
     get_igc(2007, quiet = TRUE),
-    "no Excel file found"
+    "no data file found"
   )
 })
 
@@ -401,8 +419,13 @@ test_that("get_fundeb_distribution full pipeline works", {
       file.create(destfile)
       destfile
     },
-    read_fundeb_sheets = function(file_path, year, source = NULL,
-                                  destination = NULL, quiet = FALSE) {
+    read_fundeb_sheets = function(
+      file_path,
+      year,
+      source = NULL,
+      destination = NULL,
+      quiet = FALSE
+    ) {
       mock_fundeb
     },
     .package = "educabR"
@@ -433,8 +456,13 @@ test_that("get_fundeb_distribution filters by UF", {
       file.create(destfile)
       destfile
     },
-    read_fundeb_sheets = function(file_path, year, source = NULL,
-                                  destination = NULL, quiet = FALSE) {
+    read_fundeb_sheets = function(
+      file_path,
+      year,
+      source = NULL,
+      destination = NULL,
+      quiet = FALSE
+    ) {
       mock_fundeb
     },
     .package = "educabR"
@@ -463,8 +491,13 @@ test_that("get_fundeb_distribution enforces n_max", {
       file.create(destfile)
       destfile
     },
-    read_fundeb_sheets = function(file_path, year, source = NULL,
-                                  destination = NULL, quiet = FALSE) {
+    read_fundeb_sheets = function(
+      file_path,
+      year,
+      source = NULL,
+      destination = NULL,
+      quiet = FALSE
+    ) {
       mock_fundeb
     },
     .package = "educabR"
@@ -492,8 +525,13 @@ test_that("get_fundeb_distribution keep_file=FALSE removes file", {
       file.create(destfile)
       destfile
     },
-    read_fundeb_sheets = function(file_path, year, source = NULL,
-                                  destination = NULL, quiet = FALSE) {
+    read_fundeb_sheets = function(
+      file_path,
+      year,
+      source = NULL,
+      destination = NULL,
+      quiet = FALSE
+    ) {
       mock_fundeb
     },
     .package = "educabR"
@@ -532,8 +570,13 @@ test_that("get_fundeb_distribution passes source and destination to reader", {
       file.create(destfile)
       destfile
     },
-    read_fundeb_sheets = function(file_path, year, source = NULL,
-                                  destination = NULL, quiet = FALSE) {
+    read_fundeb_sheets = function(
+      file_path,
+      year,
+      source = NULL,
+      destination = NULL,
+      quiet = FALSE
+    ) {
       captured_source <<- source
       captured_dest <<- destination
       mock_fundeb
@@ -541,8 +584,12 @@ test_that("get_fundeb_distribution passes source and destination to reader", {
     .package = "educabR"
   )
 
-  result <- get_fundeb_distribution(2023, source = "FPE",
-                                    destination = "uf", quiet = TRUE)
+  result <- get_fundeb_distribution(
+    2023,
+    source = "FPE",
+    destination = "uf",
+    quiet = TRUE
+  )
 
   expect_equal(captured_source, "FPE")
   expect_equal(captured_dest, "UF")
@@ -638,12 +685,18 @@ test_that("get_fundeb_enrollment fetches from API when not cached", {
   # Ensure no cached file exists
   filename <- "fundeb_enrollment_2018.csv"
   file_path <- educabR:::cache_path("fundeb_enrollment", filename)
-  if (file.exists(file_path)) unlink(file_path)
+  if (file.exists(file_path)) {
+    unlink(file_path)
+  }
   withr::defer(if (file.exists(file_path)) unlink(file_path))
 
   local_mocked_bindings(
-    fetch_fundeb_enrollment = function(year, uf = NULL, n_max = Inf,
-                                       quiet = FALSE) {
+    fetch_fundeb_enrollment = function(
+      year,
+      uf = NULL,
+      n_max = Inf,
+      quiet = FALSE
+    ) {
       mock_api_data
     },
     .package = "educabR"
@@ -674,12 +727,18 @@ test_that("get_fundeb_enrollment caches result when keep_file=TRUE", {
 
   filename <- "fundeb_enrollment_2018.csv"
   file_path <- educabR:::cache_path("fundeb_enrollment", filename)
-  if (file.exists(file_path)) unlink(file_path)
+  if (file.exists(file_path)) {
+    unlink(file_path)
+  }
   withr::defer(if (file.exists(file_path)) unlink(file_path))
 
   local_mocked_bindings(
-    fetch_fundeb_enrollment = function(year, uf = NULL, n_max = Inf,
-                                       quiet = FALSE) {
+    fetch_fundeb_enrollment = function(
+      year,
+      uf = NULL,
+      n_max = Inf,
+      quiet = FALSE
+    ) {
       mock_api_data
     },
     .package = "educabR"
@@ -710,12 +769,21 @@ test_that("rename_fundeb_enrollment maps CamelCase to snake_case", {
 
   result <- educabR:::rename_fundeb_enrollment(df)
 
-  expect_equal(names(result), c(
-    "ano_censo", "uf", "municipio", "tipo_rede_educacao",
-    "descricao_tipo_educacao", "descricao_tipo_ensino",
-    "descricao_tipo_turma", "descricao_tipo_carga_horaria",
-    "descricao_tipo_localizacao", "qtd_matricula"
-  ))
+  expect_equal(
+    names(result),
+    c(
+      "ano_censo",
+      "uf",
+      "municipio",
+      "tipo_rede_educacao",
+      "descricao_tipo_educacao",
+      "descricao_tipo_ensino",
+      "descricao_tipo_turma",
+      "descricao_tipo_carga_horaria",
+      "descricao_tipo_localizacao",
+      "qtd_matricula"
+    )
+  )
 })
 
 test_that("build_fundeb_url constructs valid URL", {
@@ -874,8 +942,11 @@ test_that("download_inep_file error handling when request fails", {
   dest <- file.path(temp_dir, "test.xlsx")
 
   expect_error(
-    educabR:::download_inep_file("https://fake.url/file.xlsx", dest,
-                                 quiet = TRUE),
+    educabR:::download_inep_file(
+      "https://fake.url/file.xlsx",
+      dest,
+      quiet = TRUE
+    ),
     "download failed"
   )
 })
@@ -972,7 +1043,9 @@ test_that("get_ideb_series emits deprecation warning", {
       file.create(xlsx_path)
       invisible(xlsx_path)
     },
-    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) mock_data,
+    read_ideb_excel = function(file, sheet = NULL, metric = NULL, year = NULL) {
+      mock_data
+    },
     .package = "educabR"
   )
 
@@ -1046,7 +1119,8 @@ test_that("get_igc cached file skips download", {
       file.create(destfile)
       destfile
     },
-    read_excel_safe = function(file, n_max = Inf) mock_igc,
+    read_excel_safe = function(file, n_max = Inf, sheet = 1) mock_igc,
+    igc_institution_sheets = function(file) "IGC",
     .package = "educabR"
   )
 
@@ -1081,8 +1155,13 @@ test_that("get_fundeb_distribution uses cached file", {
       file.create(destfile)
       destfile
     },
-    read_fundeb_sheets = function(file_path, year, source = NULL,
-                                  destination = NULL, quiet = FALSE) {
+    read_fundeb_sheets = function(
+      file_path,
+      year,
+      source = NULL,
+      destination = NULL,
+      quiet = FALSE
+    ) {
       mock_fundeb
     },
     .package = "educabR"

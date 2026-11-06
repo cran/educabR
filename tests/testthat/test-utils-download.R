@@ -181,7 +181,6 @@ test_that("build_inep_url builds saeb URL for non-2021 year", {
 })
 
 test_that("build_inep_url builds saeb 2021 URL with default level", {
-
   url <- build_inep_url("saeb", 2021)
   expect_match(url, "microdados_saeb_2021_ensino_fundamental_e_medio\\.zip$")
 })
@@ -208,7 +207,10 @@ test_that("build_inep_url builds encceja URL", {
 
 test_that("build_inep_url builds enem_escola URL (fixed URL)", {
   url <- build_inep_url("enem_escola", 2015)
-  expect_match(url, "enem_por_escola/2005_a_2015/microdados_enem_por_escola\\.zip$")
+  expect_match(
+    url,
+    "enem_por_escola/2005_a_2015/microdados_enem_por_escola\\.zip$"
+  )
 })
 
 test_that("build_inep_url builds idd URL with zip for year >= 2021", {
@@ -243,13 +245,13 @@ test_that("download_inep_file uses default 600s timeout when option unset", {
   captured <- c()
 
   testthat::local_mocked_bindings(
-    request    = function(url) structure(list(url = url), class = "httr2_request"),
+    request = function(url) structure(list(url = url), class = "httr2_request"),
     req_method = function(req, ...) req,
     req_timeout = function(req, seconds, ...) {
       captured <<- c(captured, seconds)
       req
     },
-    req_retry   = function(req, ...) req,
+    req_retry = function(req, ...) req,
     req_perform = function(req) stop("mocked"),
     .package = "httr2"
   )
@@ -270,13 +272,13 @@ test_that("download_inep_file respects educabR.download_timeout option (issue #7
   captured <- c()
 
   testthat::local_mocked_bindings(
-    request    = function(url) structure(list(url = url), class = "httr2_request"),
+    request = function(url) structure(list(url = url), class = "httr2_request"),
     req_method = function(req, ...) req,
     req_timeout = function(req, seconds, ...) {
       captured <<- c(captured, seconds)
       req
     },
-    req_retry   = function(req, ...) req,
+    req_retry = function(req, ...) req,
     req_perform = function(req) stop("mocked"),
     .package = "httr2"
   )
@@ -374,6 +376,44 @@ test_that("verify_download_integrity rejects .zip missing magic bytes", {
   expect_false(file.exists(f))
 })
 
+test_that("verify_download_integrity accepts a RAR served as .zip", {
+  # IDD 2022: INEP serves a RAR v5 archive under a .zip name
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  writeBin(as.raw(c(0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x01, 0x00, 0x58)), f)
+
+  expect_silent(educabR:::verify_download_integrity(f))
+  expect_true(file.exists(f))
+})
+
+test_that("archive_format identifies ZIP, 7z and RAR by signature", {
+  fmt <- educabR:::archive_format
+  expect_equal(fmt(as.raw(c(0x50, 0x4B, 0x03, 0x04, 0, 0))), "zip")
+  expect_equal(fmt(as.raw(c(0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C))), "7z")
+  expect_equal(fmt(as.raw(c(0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00))), "rar")
+  expect_true(is.na(fmt(as.raw(c(0xDE, 0xAD, 0xBE, 0xEF, 0, 0)))))
+  expect_true(is.na(fmt(raw(0))))
+})
+
+test_that("extract_archive dispatches on the signature, not the extension", {
+  f <- tempfile(fileext = ".zip")
+  withr::defer(unlink(f))
+  writeBin(as.raw(c(0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x01, 0x00)), f)
+  used_7z <- FALSE
+
+  local_mocked_bindings(
+    extract_zip = function(...) stop("should not use unzip for a RAR file"),
+    find_7z = function() {
+      used_7z <<- TRUE
+      stop("stop after dispatch")
+    },
+    .package = "educabR"
+  )
+
+  expect_error(educabR:::extract_archive(f, tempfile()), "stop after dispatch")
+  expect_true(used_7z)
+})
+
 test_that("verify_download_integrity rejects empty file", {
   f <- tempfile(fileext = ".zip")
   withr::defer(unlink(f))
@@ -467,7 +507,10 @@ test_that("validate_year rejects non-numeric year (issue #2)", {
 test_that("fallback_years returns correct years for all datasets", {
   expect_equal(fallback_years("censo_escolar"), 1995:2025)
   expect_equal(fallback_years("enem"), 1998:2025)
-  expect_equal(fallback_years("saeb"), c(2011L, 2013L, 2015L, 2017L, 2019L, 2021L, 2023L))
+  expect_equal(
+    fallback_years("saeb"),
+    c(2011L, 2013L, 2015L, 2017L, 2019L, 2021L, 2023L)
+  )
   expect_equal(fallback_years("censo_superior"), 2009:2024)
   expect_equal(fallback_years("enade"), c(2004L:2019L, 2021L:2023L))
   expect_equal(fallback_years("encceja"), c(2014L, 2017L:2020L, 2022L:2025L))
@@ -482,8 +525,20 @@ test_that("fallback_years returns correct years for all datasets", {
 test_that("available_years returns non-empty sorted integer vector", {
   # available_years may use dynamic discovery or fallback depending on network
   # so we only test general properties, not exact values
-  for (ds in c("censo_escolar", "enem", "saeb", "censo_superior", "enade",
-               "encceja", "idd", "cpc", "igc", "capes", "ideb", "fundeb")) {
+  for (ds in c(
+    "censo_escolar",
+    "enem",
+    "saeb",
+    "censo_superior",
+    "enade",
+    "encceja",
+    "idd",
+    "cpc",
+    "igc",
+    "capes",
+    "ideb",
+    "fundeb"
+  )) {
     yrs <- available_years(ds)
     expect_true(length(yrs) > 0, info = paste("dataset:", ds))
     expect_true(is.numeric(yrs), info = paste("dataset:", ds))
@@ -578,10 +633,33 @@ test_that("standardize_names handles mixed special characters", {
 
 test_that("uf_to_code converts all 27 UF abbreviations", {
   uf_expected <- c(
-    RO = 11, AC = 12, AM = 13, RR = 14, PA = 15, AP = 16, TO = 17,
-    MA = 21, PI = 22, CE = 23, RN = 24, PB = 25, PE = 26, AL = 27,
-    SE = 28, BA = 29, MG = 31, ES = 32, RJ = 33, SP = 35,
-    PR = 41, SC = 42, RS = 43, MS = 50, MT = 51, GO = 52, DF = 53
+    RO = 11,
+    AC = 12,
+    AM = 13,
+    RR = 14,
+    PA = 15,
+    AP = 16,
+    TO = 17,
+    MA = 21,
+    PI = 22,
+    CE = 23,
+    RN = 24,
+    PB = 25,
+    PE = 26,
+    AL = 27,
+    SE = 28,
+    BA = 29,
+    MG = 31,
+    ES = 32,
+    RJ = 33,
+    SP = 35,
+    PR = 41,
+    SC = 42,
+    RS = 43,
+    MS = 50,
+    MT = 51,
+    GO = 52,
+    DF = 53
   )
 
   for (uf_name in names(uf_expected)) {
@@ -624,6 +702,34 @@ test_that("parse_sas_dates converts dt_ columns with SAS datetime format", {
   expect_s3_class(result$dt_criacao, "Date")
   expect_equal(result$dt_criacao[1], as.Date("2024-02-12"))
   expect_equal(result$dt_criacao[2], as.Date("2023-01-01"))
+})
+
+test_that("parse_sas_dates reads dd/mm/yyyy dates instead of erasing them", {
+  # CAPES catalogo 2013-2016: every date became NA with the SAS-only format
+  df <- data.frame(
+    dt_titulacao = c("12/12/2013 00:00:00", "18/02/2013 00:00:00", NA, ""),
+    dt_iso = c("2013-12-12", NA, NA, NA),
+    stringsAsFactors = FALSE
+  )
+
+  result <- educabR:::parse_sas_dates(df)
+
+  expect_equal(
+    result$dt_titulacao,
+    as.Date(c("2013-12-12", "2013-02-18", NA, NA))
+  )
+  expect_equal(result$dt_iso[1], as.Date("2013-12-12"))
+})
+
+test_that("parse_sas_dates keeps text when no format reads every value", {
+  df <- data.frame(
+    dt_mixed = c("12FEB2024:00:00:00", "sem data", "13/02/2024"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- educabR:::parse_sas_dates(df)
+
+  expect_identical(result$dt_mixed, df$dt_mixed)
 })
 
 test_that("parse_sas_dates converts dh_ columns", {
@@ -955,4 +1061,16 @@ test_that("normalize_utf8_nfc preserves NA values in character columns", {
   expect_true(is.na(out$rede[2]))
   expect_equal(out$rede[1], "Pública")
   expect_equal(out$rede[3], "Federal")
+})
+
+test_that("parse_sas_dates treats INEP's '0' as a missing date", {
+  # Censo Escolar 2008-2021: dt_ano_letivo_inicio uses "0" for no date
+  df <- data.frame(
+    dt_ano_letivo_inicio = c("02FEB2015:00:00:00", "0", NA),
+    stringsAsFactors = FALSE
+  )
+
+  result <- educabR:::parse_sas_dates(df)
+
+  expect_equal(result$dt_ano_letivo_inicio, as.Date(c("2015-02-02", NA, NA)))
 })

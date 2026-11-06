@@ -72,12 +72,14 @@
 #' docentes_2025 <- get_censo_escolar(2025, file = "Docente")
 #' turmas_2025 <- get_censo_escolar(2025, file = "Turma")
 #' }
-get_censo_escolar <- function(year,
-                              file = NULL,
-                              uf = NULL,
-                              n_max = Inf,
-                              keep_zip = TRUE,
-                              quiet = FALSE) {
+get_censo_escolar <- function(
+  year,
+  file = NULL,
+  uf = NULL,
+  n_max = Inf,
+  keep_zip = TRUE,
+  quiet = FALSE
+) {
   # validate arguments
   validate_year(year, "censo_escolar")
 
@@ -128,7 +130,12 @@ get_censo_escolar <- function(year,
   read_max <- if (!is.null(uf)) Inf else n_max
 
   # read the file
-  df <- read_inep_file(data_file, delim = delim, n_max = read_max, quiet = quiet)
+  df <- read_inep_file(
+    data_file,
+    delim = delim,
+    n_max = read_max,
+    quiet = quiet
+  )
 
   # standardize column names
   df <- standardize_names(df)
@@ -241,7 +248,6 @@ find_censo_file_by_name <- function(exdir, file, year) {
 #'
 #' @keywords internal
 find_censo_file <- function(exdir, year) {
-
   # look for the main microdados file
   # 2007-2024: microdados_ed_basica_{year}.csv
   # 1995-2006: CENSOESC_{year}.CSV
@@ -302,12 +308,33 @@ uf_to_code <- function(uf) {
 
   # uf mapping
   uf_map <- c(
-    "RO" = 11, "AC" = 12, "AM" = 13, "RR" = 14, "PA" = 15,
-    "AP" = 16, "TO" = 17, "MA" = 21, "PI" = 22, "CE" = 23,
-    "RN" = 24, "PB" = 25, "PE" = 26, "AL" = 27, "SE" = 28,
-    "BA" = 29, "MG" = 31, "ES" = 32, "RJ" = 33, "SP" = 35,
-    "PR" = 41, "SC" = 42, "RS" = 43, "MS" = 50, "MT" = 51,
-    "GO" = 52, "DF" = 53
+    "RO" = 11,
+    "AC" = 12,
+    "AM" = 13,
+    "RR" = 14,
+    "PA" = 15,
+    "AP" = 16,
+    "TO" = 17,
+    "MA" = 21,
+    "PI" = 22,
+    "CE" = 23,
+    "RN" = 24,
+    "PB" = 25,
+    "PE" = 26,
+    "AL" = 27,
+    "SE" = 28,
+    "BA" = 29,
+    "MG" = 31,
+    "ES" = 32,
+    "RJ" = 33,
+    "SP" = 35,
+    "PR" = 41,
+    "SC" = 42,
+    "RS" = 43,
+    "MS" = 50,
+    "MT" = 51,
+    "GO" = 52,
+    "DF" = 53
   )
 
   uf_upper <- toupper(uf)
@@ -319,11 +346,16 @@ uf_to_code <- function(uf) {
   unname(uf_map[uf_upper])
 }
 
-#' Parse SAS datetime columns to Date
+#' Parse date columns (dt_*, dh_*) to Date
 #'
 #' @description
-#' Internal function to convert columns with SAS datetime format
-#' (e.g. "12FEB2024:00:00:00") to Date objects.
+#' Internal function to convert text date columns to Date objects. INEP
+#' and CAPES use several formats: SAS datetime ("12FEB2024:00:00:00"),
+#' "12/12/2013 00:00:00", "12/12/2013" and ISO "2013-12-12". For each
+#' column the format that reads every non-empty value is used. If no
+#' format reads them all, the column is kept as text: converting with a
+#' single fixed format turned every value of the CAPES catalogo 2013-2016
+#' dates into `NA`.
 #'
 #' @param df A data frame.
 #'
@@ -337,9 +369,25 @@ parse_sas_dates <- function(df) {
   on.exit(Sys.setlocale("LC_TIME", old_locale), add = TRUE)
   Sys.setlocale("LC_TIME", "C")
 
+  formats <- c("%d%b%Y:%H:%M:%S", "%d/%m/%Y", "%Y-%m-%d")
+
   for (col in dt_cols) {
-    if (is.character(df[[col]])) {
-      df[[col]] <- as.Date(df[[col]], format = "%d%b%Y:%H:%M:%S")
+    x <- df[[col]]
+    if (!is.character(x)) {
+      next
+    }
+    # INEP writes "0" for a missing date (Censo Escolar 2008-2021)
+    x[trimws(x) == "0"] <- NA_character_
+    filled <- !is.na(x) & nzchar(trimws(x))
+    if (!any(filled)) {
+      next
+    }
+    for (fmt in formats) {
+      parsed <- as.Date(x, format = fmt)
+      if (all(!is.na(parsed[filled]))) {
+        df[[col]] <- parsed
+        break
+      }
     }
   }
 
@@ -352,20 +400,56 @@ parse_sas_dates <- function(df) {
 #' Internal function to standardize column names to lowercase
 #' with underscores.
 #'
+#' When two names collide after standardization (CPC 2007/2008 have both
+#' "Docentes Doutores" and "% Docentes Doutores"), a "%" in the colliding
+#' original name becomes "pct"; any collision left gets a numeric suffix
+#' (`_2`, `_3`, ...). Names that do not collide are unchanged.
+#'
 #' @param df A data frame.
 #'
 #' @return The data frame with standardized names.
 #'
 #' @keywords internal
 standardize_names <- function(df) {
-  names(df) <- names(df) |>
-    str_to_lower() |>
-    iconv(from = "UTF-8", to = "ASCII//TRANSLIT") |>
-    str_replace_all("[^a-z0-9]", "_") |>
-    str_replace_all("_+", "_") |>
-    str_remove("^_") |>
-    str_remove("_$")
+  # superscript 1-3 and the superscript/subscript block, as code points
+  # (keeps the source ASCII-only)
+  superscripts <- str_c(
+    "[",
+    intToUtf8(c(0xB9, 0xB2, 0xB3, 0x2070)),
+    "-",
+    intToUtf8(0x209F),
+    "]"
+  )
 
+  clean <- function(x) {
+    x |>
+      # superscript footnote marks ("Nome da IES¹") are not part of the name
+      str_replace_all(superscripts, "") |>
+      str_to_lower() |>
+      ascii_fold() |>
+      str_replace_all("[^a-z0-9]", "_") |>
+      str_replace_all("_+", "_") |>
+      str_remove("^_") |>
+      str_remove("_$")
+  }
+
+  original <- names(df)
+  new <- clean(original)
+
+  collide <- new %in% new[duplicated(new)] & str_detect(original, "%")
+  if (any(collide)) {
+    new[collide] <- clean(str_replace_all(original[collide], "%", " pct "))
+  }
+
+  if (anyDuplicated(new)) {
+    for (nm in unique(new[duplicated(new)])) {
+      idx <- which(new == nm)
+      stem <- if (nm == "") "unnamed" else nm
+      new[idx[-1]] <- str_c(stem, "_", seq_along(idx)[-1])
+    }
+  }
+
+  names(df) <- new
   df
 }
 

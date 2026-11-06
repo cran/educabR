@@ -26,9 +26,11 @@ get_remote_file_size <- function(url) {
 # verify a downloaded file is structurally plausible
 # unlinks destfile and aborts on detected corruption so a bad blob
 # is never silently cached
-verify_download_integrity <- function(destfile,
-                                      expected_size = NULL,
-                                      url = NULL) {
+verify_download_integrity <- function(
+  destfile,
+  expected_size = NULL,
+  url = NULL
+) {
   if (!file.exists(destfile)) {
     cli::cli_abort("download missing: {.path {destfile}}")
   }
@@ -65,8 +67,14 @@ verify_download_integrity <- function(destfile,
   # payloads as the system locale and emitting translation warnings
   if (!any(first_bytes == as.raw(0))) {
     first_text <- rawToChar(first_bytes)
-    if (grepl("^\\s*<(!doctype|html)", first_text,
-              ignore.case = TRUE, useBytes = TRUE)) {
+    if (
+      grepl(
+        "^\\s*<(!doctype|html)",
+        first_text,
+        ignore.case = TRUE,
+        useBytes = TRUE
+      )
+    ) {
       unlink(destfile)
       cli::cli_abort(c(
         "downloaded file is HTML, not data",
@@ -77,14 +85,15 @@ verify_download_integrity <- function(destfile,
     }
   }
 
-  # ZIP magic-bytes check (only for files we expect to be ZIP)
-  if (tolower(tools::file_ext(destfile)) == "zip") {
-    zip_magic <- as.raw(c(0x50, 0x4B, 0x03, 0x04))
-    if (length(first_bytes) < 4L || !identical(first_bytes[1:4], zip_magic)) {
+  # archive check (only for files we expect to be an archive): any known
+  # archive signature is accepted, because INEP sometimes serves one format
+  # under another extension (IDD 2022 is a RAR file named .zip)
+  if (tolower(tools::file_ext(destfile)) %in% c("zip", "7z", "rar")) {
+    if (is.na(archive_format(first_bytes))) {
       unlink(destfile)
       cli::cli_abort(c(
-        "downloaded file is not a valid ZIP archive",
-        "x" = "missing ZIP magic bytes (PK\\x03\\x04)",
+        "downloaded file is not a valid archive",
+        "x" = "no ZIP, 7z or RAR signature in the first bytes",
         "i" = "retry the download \u2014 the cached file has been deleted"
       ))
     }
@@ -138,7 +147,7 @@ download_inep_file <- function(url, destfile, quiet = FALSE) {
     {
       req <- httr2::request(url) |>
         httr2::req_timeout(seconds = timeout) |>
-        httr2::req_retry(max_tries = 3, backoff = ~ 5)
+        httr2::req_retry(max_tries = 3, backoff = ~5, retry_on_failure = TRUE)
 
       resp <- httr2::req_perform(req)
 
@@ -173,6 +182,14 @@ download_inep_file <- function(url, destfile, quiet = FALSE) {
 #' @description
 #' Internal function to extract ZIP files with progress indication.
 #'
+#' `utils::unzip()` is tried first. Its zlib backend cannot decode some
+#' entries INEP ships (Deflate64 compression, used for `RESULTADOS_2025.csv`
+#' in the ENEM 2025 archive) and skips them with only a "zip file is corrupt"
+#' warning, so the number of extracted files is compared with the archive's
+#' listing. When anything is missing, the archive is extracted again with an
+#' external tool (7-Zip, then PowerShell on Windows or `unzip` elsewhere),
+#' and an error is raised if the archive is still incomplete.
+#'
 #' @param zipfile Path to the ZIP file.
 #' @param exdir Directory to extract to.
 #' @param quiet Logical. If `TRUE`, suppresses progress messages.
@@ -188,91 +205,143 @@ extract_zip <- function(zipfile, exdir, quiet = FALSE) {
   # create directory if needed
   dir.create(exdir, recursive = TRUE, showWarnings = FALSE)
 
-  # try standard unzip first, fall back to system command if encoding issues
-  tryCatch(
-    {
-      files <- withCallingHandlers(
-        utils::unzip(zipfile, exdir = exdir),
-        warning = function(w) {
-          # mute only the specific warnings utils::unzip emits when it
-          # fails to decode non-ASCII filenames in INEP archives — the
-          # fallback below still triggers via length(files) == 0, so
-          # silencing here only suppresses log noise, not recovery.
-          msg <- conditionMessage(w)
-          if (grepl("error -?\\d+ in extracting", msg, ignore.case = TRUE) ||
-              grepl("Falha na convers", msg, ignore.case = TRUE)) {
-            invokeRestart("muffleWarning")
-          }
-        }
-      )
+  expected <- zip_file_count(zipfile)
 
-      if (length(files) == 0) {
-        stop("unzip extracted 0 files")
-      }
+  # utils::unzip warns (instead of failing) on entries it cannot decode:
+  # non-ASCII names in old INEP archives and Deflate64 entries. Completeness
+  # is checked below by counting, so the warnings themselves are muffled.
+  files <- tryCatch(
+    suppressWarnings(utils::unzip(zipfile, exdir = exdir)),
+    error = function(e) character()
+  )
 
+  if (length(files) > 0 && (is.na(expected) || length(files) >= expected)) {
+    if (!quiet) {
+      cli::cli_alert_success("extracted {.val {length(files)}} file(s)")
+    }
+    return(files)
+  }
+
+  if (!quiet) {
+    cli::cli_alert_warning(
+      "standard extraction incomplete, trying an external tool..."
+    )
+  }
+
+  for (tool in zip_external_tools()) {
+    ok <- tryCatch(
+      {
+        tool$run(zipfile, exdir)
+        TRUE
+      },
+      error = function(e) FALSE
+    )
+    if (!ok) {
+      next
+    }
+    files <- list.files(exdir, recursive = TRUE, full.names = TRUE)
+    if (length(files) > 0 && (is.na(expected) || length(files) >= expected)) {
       if (!quiet) {
-        cli::cli_alert_success("extracted {.val {length(files)}} file(s)")
-      }
-
-      files
-    },
-    error = function(e) {
-      # encoding errors or empty extraction — try alternative method
-      if (!quiet) {
-        cli::cli_alert_warning(
-          "standard extraction failed due to encoding, trying alternative method..."
+        cli::cli_alert_success(
+          "extracted {.val {length(files)}} file(s) with {tool$name}"
         )
       }
-
-      # try using system unzip command (Windows has tar that can handle zip)
-      tryCatch(
-        {
-          # use PowerShell Expand-Archive on Windows
-          if (.Platform$OS.type == "windows") {
-            cmd <- sprintf(
-              'powershell -Command "Expand-Archive -Path \'%s\' -DestinationPath \'%s\' -Force"',
-              normalizePath(zipfile, winslash = "/"),
-              normalizePath(exdir, winslash = "/", mustWork = FALSE)
-            )
-            system(cmd, intern = FALSE, ignore.stdout = TRUE, ignore.stderr = TRUE)
-          } else {
-            # on unix, use unzip command
-            system2("unzip", args = c("-o", "-q", shQuote(zipfile), "-d", shQuote(exdir)))
-          }
-
-          # list extracted files
-          files <- list.files(exdir, recursive = TRUE, full.names = TRUE)
-
-          if (length(files) == 0) {
-            stop("no files extracted")
-          }
-
-          if (!quiet) {
-            cli::cli_alert_success("extracted {.val {length(files)}} file(s)")
-          }
-
-          files
-        },
-        error = function(e2) {
-          cli::cli_abort(
-            c(
-              "extraction failed with both methods",
-              "x" = "file: {.path {zipfile}}",
-              "i" = "original error: {conditionMessage(e)}",
-              "i" = "alternative error: {conditionMessage(e2)}"
-            )
-          )
-        }
-      )
+      return(files)
     }
+  }
+
+  cli::cli_abort(
+    c(
+      "could not extract every file from the archive",
+      "x" = "file: {.path {zipfile}}",
+      "i" = "the archive may use a compression method R cannot read (Deflate64)",
+      "i" = "install 7-Zip ({.url https://www.7-zip.org/}) and try again"
+    )
   )
+}
+
+# number of files (not directories) listed in a ZIP; NA when unreadable
+zip_file_count <- function(zipfile) {
+  listing <- tryCatch(
+    suppressWarnings(utils::unzip(zipfile, list = TRUE)),
+    error = function(e) NULL
+  )
+  if (is.null(listing) || nrow(listing) == 0) {
+    return(NA_integer_)
+  }
+  sum(!grepl("/$", listing$Name))
+}
+
+# external extractors, in order of preference; each `run` errors on failure
+zip_external_tools <- function() {
+  tools <- list()
+
+  sevenz <- find_7z()
+  if (nzchar(Sys.which(sevenz)) || file.exists(sevenz)) {
+    tools <- c(tools, list(list(
+      name = "7-Zip",
+      run = function(zipfile, exdir) {
+        out <- system2(
+          sevenz,
+          args = c(
+            "x",
+            shQuote(normalizePath(zipfile, winslash = "/")),
+            paste0(
+              "-o",
+              shQuote(normalizePath(exdir, winslash = "/", mustWork = FALSE))
+            ),
+            "-y"
+          ),
+          stdout = TRUE,
+          stderr = TRUE
+        )
+        status <- attr(out, "status")
+        if (!is.null(status) && status != 0) stop("7z exit status ", status)
+      }
+    )))
+  }
+
+  if (.Platform$OS.type == "windows") {
+    tools <- c(tools, list(list(
+      name = "PowerShell",
+      run = function(zipfile, exdir) {
+        cmd <- sprintf(
+          'powershell -Command "Expand-Archive -Path \'%s\' -DestinationPath \'%s\' -Force"',
+          normalizePath(zipfile, winslash = "/"),
+          normalizePath(exdir, winslash = "/", mustWork = FALSE)
+        )
+        status <- system(
+          cmd,
+          intern = FALSE,
+          ignore.stdout = TRUE,
+          ignore.stderr = TRUE
+        )
+        if (status != 0) stop("Expand-Archive exit status ", status)
+      }
+    )))
+  } else if (nzchar(Sys.which("unzip"))) {
+    tools <- c(tools, list(list(
+      name = "unzip",
+      run = function(zipfile, exdir) {
+        status <- system2(
+          "unzip",
+          args = c("-o", "-q", shQuote(zipfile), "-d", shQuote(exdir))
+        )
+        if (status != 0) stop("unzip exit status ", status)
+      }
+    )))
+  }
+
+  tools
 }
 
 # find the 7z executable (checks PATH and common install locations)
 find_7z <- function() {
   # try PATH first
   path_result <- Sys.which("7z")
-  if (nzchar(path_result)) return(unname(path_result))
+  if (nzchar(path_result)) {
+    return(unname(path_result))
+  }
 
   # common install locations on Windows
   if (.Platform$OS.type == "windows") {
@@ -291,6 +360,34 @@ find_7z <- function() {
   "7z"
 }
 
+#' Identify an archive format from its first bytes
+#'
+#' @description
+#' Internal function. Returns `"zip"`, `"7z"` or `"rar"` from the file
+#' signature, or `NA` when none matches. Used instead of the extension,
+#' which INEP does not always get right (IDD 2022 is a RAR named `.zip`).
+#'
+#' @param bytes A raw vector with the first bytes of the file (at least 6).
+#'
+#' @return A string or `NA_character_`.
+#'
+#' @keywords internal
+archive_format <- function(bytes) {
+  starts <- function(sig) {
+    length(bytes) >= length(sig) && identical(bytes[seq_along(sig)], sig)
+  }
+  if (starts(as.raw(c(0x50, 0x4B, 0x03, 0x04)))) {
+    return("zip")
+  }
+  if (starts(as.raw(c(0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C)))) {
+    return("7z")
+  }
+  if (starts(as.raw(c(0x52, 0x61, 0x72, 0x21, 0x1A, 0x07)))) {
+    return("rar")
+  }
+  NA_character_
+}
+
 #' Extract an archive file (ZIP, 7z, or RAR)
 #'
 #' @description
@@ -306,7 +403,15 @@ find_7z <- function() {
 #'
 #' @keywords internal
 extract_archive <- function(archive, exdir, quiet = FALSE) {
-  ext <- tools::file_ext(archive)
+  # dispatch on the file's signature, falling back to the extension
+  ext <- if (file.exists(archive)) {
+    archive_format(readBin(archive, "raw", n = 8L))
+  } else {
+    NA_character_
+  }
+  if (is.na(ext)) {
+    ext <- tools::file_ext(archive)
+  }
 
   if (tolower(ext) == "zip") {
     return(extract_zip(archive, exdir, quiet = quiet))
@@ -326,10 +431,17 @@ extract_archive <- function(archive, exdir, quiet = FALSE) {
       {
         system2(
           sevenz_cmd,
-          args = c("x", shQuote(normalizePath(archive, winslash = "/")),
-                   paste0("-o", shQuote(normalizePath(exdir, winslash = "/", mustWork = FALSE))),
-                   "-y"),
-          stdout = TRUE, stderr = TRUE
+          args = c(
+            "x",
+            shQuote(normalizePath(archive, winslash = "/")),
+            paste0(
+              "-o",
+              shQuote(normalizePath(exdir, winslash = "/", mustWork = FALSE))
+            ),
+            "-y"
+          ),
+          stdout = TRUE,
+          stderr = TRUE
         )
       },
       error = function(e) {
@@ -386,11 +498,18 @@ build_inep_url <- function(dataset, year, ...) {
       # 2025: INEP added trailing underscore to filename
       suffix <- if (year == 2025) "_" else ""
       str_c(
-        base, "/dados_abertos/microdados_censo_escolar_", year, suffix, ".zip"
+        base,
+        "/dados_abertos/microdados_censo_escolar_",
+        year,
+        suffix,
+        ".zip"
       )
     },
     "enem" = str_c(
-      base, "/microdados/microdados_enem_", year, ".zip"
+      base,
+      "/microdados/microdados_enem_",
+      year,
+      ".zip"
     ),
     "saeb" = {
       level <- list(...)$level %||% "fundamental_medio"
@@ -406,16 +525,26 @@ build_inep_url <- function(dataset, year, ...) {
       }
     },
     "censo_superior" = str_c(
-      base, "/microdados/microdados_censo_da_educacao_superior_", year, ".zip"
+      base,
+      "/microdados/microdados_censo_da_educacao_superior_",
+      year,
+      ".zip"
     ),
     "enade" = str_c(
-      base, "/microdados/microdados_enade_", year, ".zip"
+      base,
+      "/microdados/microdados_enade_",
+      year,
+      ".zip"
     ),
     "encceja" = str_c(
-      base, "/microdados/microdados_encceja_", year, ".zip"
+      base,
+      "/microdados/microdados_encceja_",
+      year,
+      ".zip"
     ),
     "enem_escola" = str_c(
-      base, "/microdados/enem_por_escola/2005_a_2015/microdados_enem_por_escola.zip"
+      base,
+      "/microdados/enem_por_escola/2005_a_2015/microdados_enem_por_escola.zip"
     ),
     "idd" = {
       ext <- if (year >= 2021) ".zip" else ".7z"
@@ -444,6 +573,7 @@ fallback_years <- function(dataset) {
     "encceja" = c(2014L, 2017L:2020L, 2022L:2025L),
     "idd" = c(2014L:2019L, 2021L:2023L),
     "cpc" = c(2007L:2019L, 2021L:2023L),
+    "conceito_enade" = c(2004L:2019L, 2021L:2023L, 2025L),
     "igc" = c(2007L:2019L, 2021L:2023L),
     "capes" = 2013:2024,
     "ideb" = c(2017L, 2019L, 2021L, 2023L, 2025L),
@@ -488,22 +618,32 @@ inep_head_ok <- function(url) {
 # removed — a transient HEAD failure must not hide a valid year (#17)
 discover_inep_years <- function(dataset) {
   candidates <- candidate_year_range(dataset)
-  if (is.null(candidates)) return(NULL)
+  if (is.null(candidates)) {
+    return(NULL)
+  }
 
   known <- fallback_years(dataset)
   new_candidates <- sort(candidates[candidates > max(known)])
 
-  if (length(new_candidates) == 0) return(known)
+  if (length(new_candidates) == 0) {
+    return(known)
+  }
 
-  check_results <- vapply(new_candidates, function(year) {
-    url <- tryCatch(
-      build_inep_url(dataset, year),
-      error = function(e) NA_character_
-    )
-    if (is.na(url)) return(FALSE)
+  check_results <- vapply(
+    new_candidates,
+    function(year) {
+      url <- tryCatch(
+        build_inep_url(dataset, year),
+        error = function(e) NA_character_
+      )
+      if (is.na(url)) {
+        return(FALSE)
+      }
 
-    inep_head_ok(url)
-  }, logical(1))
+      inep_head_ok(url)
+    },
+    logical(1)
+  )
 
   sort(unique(c(known, new_candidates[check_results])))
 }
@@ -516,24 +656,28 @@ discover_fundeb_enrollment_years <- function() {
 
   base_url <- fundeb_enrollment_api_url()
 
-  check_results <- vapply(to_check, function(year) {
-    tryCatch(
-      {
-        req <- httr2::request(base_url) |>
-          httr2::req_url_query(
-            `$filter` = paste0("AnoCenso eq ", year),
-            `$top` = 1,
-            `$format` = "json"
-          ) |>
-          httr2::req_timeout(seconds = 10) |>
-          httr2::req_error(is_error = function(resp) FALSE)
-        resp <- httr2::req_perform(req)
-        body <- httr2::resp_body_json(resp)
-        length(body$value) > 0
-      },
-      error = function(e) FALSE
-    )
-  }, logical(1))
+  check_results <- vapply(
+    to_check,
+    function(year) {
+      tryCatch(
+        {
+          req <- httr2::request(base_url) |>
+            httr2::req_url_query(
+              `$filter` = paste0("AnoCenso eq ", year),
+              `$top` = 1,
+              `$format` = "json"
+            ) |>
+            httr2::req_timeout(seconds = 10) |>
+            httr2::req_error(is_error = function(resp) FALSE)
+          resp <- httr2::req_perform(req)
+          body <- httr2::resp_body_json(resp)
+          length(body$value) > 0
+        },
+        error = function(e) FALSE
+      )
+    },
+    logical(1)
+  )
 
   sort(to_check[check_results])
 }
@@ -546,25 +690,31 @@ discover_enade_years <- function() {
   known_years <- sort(as.integer(names(enade_urls)))
   max_known <- max(known_years)
 
-  if (max_known >= current_year) return(known_years)
+  if (max_known >= current_year) {
+    return(known_years)
+  }
 
   new_candidates <- setdiff((max_known + 1L):current_year, 2020L)
 
   base <- inep_base_url()
 
-  check_results <- vapply(new_candidates, function(year) {
-    # new years aren't in the URL map, try multiple patterns
-    urls <- c(
-      str_c(base, "/microdados/microdados_enade_", year, ".zip"),
-      str_c(base, "/microdados/microdados_enade_", year, "_LGPD.zip"),
-      str_c(base, "/microdados/microdados_enade_", year, "_LGPD.rar")
-    )
+  check_results <- vapply(
+    new_candidates,
+    function(year) {
+      # new years aren't in the URL map, try multiple patterns
+      urls <- c(
+        str_c(base, "/microdados/microdados_enade_", year, ".zip"),
+        str_c(base, "/microdados/microdados_enade_", year, "_LGPD.zip"),
+        str_c(base, "/microdados/microdados_enade_", year, "_LGPD.rar")
+      )
 
-    for (url in urls) {
-      if (inep_head_ok(url)) return(TRUE)
-    }
-    FALSE
-  }, logical(1))
+      for (url in urls) {
+        if (inep_head_ok(url)) return(TRUE)
+      }
+      FALSE
+    },
+    logical(1)
+  )
 
   sort(unique(c(known_years, new_candidates[check_results])))
 }
@@ -572,8 +722,14 @@ discover_enade_years <- function() {
 # main discovery dispatcher
 discover_available_years <- function(dataset) {
   # datasets with HEAD-checkable INEP URLs (consistent patterns)
-  head_check <- c("censo_escolar", "enem", "saeb", "censo_superior",
-                   "encceja", "idd")
+  head_check <- c(
+    "censo_escolar",
+    "enem",
+    "saeb",
+    "censo_superior",
+    "encceja",
+    "idd"
+  )
 
   if (dataset %in% head_check) {
     return(discover_inep_years(dataset))
@@ -585,9 +741,23 @@ discover_available_years <- function(dataset) {
   }
 
   # datasets with hardcoded URL maps (years = map keys)
-  if (dataset == "cpc") return(sort(as.integer(names(cpc_urls))))
-  if (dataset == "igc") return(sort(as.integer(names(igc_urls))))
-  if (dataset == "fundeb") return(sort(as.integer(names(fundeb_recursos_ids))))
+  if (dataset == "conceito_enade") {
+    # own spreadsheets + 2007-2011 from the Enade/CPC table + 2025
+    return(sort(unique(c(
+      as.integer(names(conceito_enade_urls)),
+      2007L:2011L,
+      2025L
+    ))))
+  }
+  if (dataset == "cpc") {
+    return(sort(as.integer(names(cpc_urls))))
+  }
+  if (dataset == "igc") {
+    return(sort(as.integer(names(igc_urls))))
+  }
+  if (dataset == "fundeb") {
+    return(sort(as.integer(names(fundeb_recursos_ids))))
+  }
 
   # FUNDEB enrollment: query OData API
   if (dataset == "fundeb_enrollment") {
@@ -621,25 +791,44 @@ discover_available_years <- function(dataset) {
 available_years <- function(dataset) {
   dataset <- match.arg(
     dataset,
-    choices = c("censo_escolar", "enem", "saeb", "censo_superior", "enade",
-                "encceja", "idd", "cpc", "igc", "capes", "ideb",
-                "fundeb", "fundeb_enrollment")
+    choices = c(
+      "censo_escolar",
+      "enem",
+      "saeb",
+      "censo_superior",
+      "enade",
+      "encceja",
+      "idd",
+      "cpc",
+      "conceito_enade",
+      "igc",
+      "capes",
+      "ideb",
+      "fundeb",
+      "fundeb_enrollment"
+    )
   )
 
   # check session cache
 
   cache_key <- paste0("available_years_", dataset)
   cached <- .educabr_env[[cache_key]]
-  if (!is.null(cached)) return(cached)
+  if (!is.null(cached)) {
+    return(cached)
+  }
 
   # skip discovery if disabled (e.g., during testing)
   skip_discovery <- identical(Sys.getenv("EDUCABR_SKIP_DISCOVERY"), "true")
 
   # try dynamic discovery
-  years <- if (skip_discovery) NULL else tryCatch(
-    discover_available_years(dataset),
-    error = function(e) NULL
-  )
+  years <- if (skip_discovery) {
+    NULL
+  } else {
+    tryCatch(
+      discover_available_years(dataset),
+      error = function(e) NULL
+    )
+  }
 
   # fallback to hardcoded list if discovery fails
   if (is.null(years) || length(years) == 0) {
@@ -756,19 +945,106 @@ detect_delim <- function(file) {
 #' @return A character string with the encoding name.
 #'
 #' @keywords internal
-detect_encoding <- function(file) {
-  # read raw bytes from the first chunk of the file
-  raw_bytes <- readBin(file, "raw", n = 10000)
-  text <- rawToChar(raw_bytes)
+detect_encoding <- function(file, chunk_size = 4 * 1024^2) {
+  # Decide on the first chunk that holds a non-ASCII byte. A fixed sample
+  # of the first bytes is not enough: in Censo Escolar 2000 (latin1) the
+  # first accent is 238 MB into a 318 MB file, so a 10 KB sample said
+  # "UTF-8" and 34,882 values of `uf` came out as "S�o Paulo".
+  # A file with no non-ASCII byte at all reads the same either way.
+  # validUTF8() behaves the same on every platform; the former
+  # iconv(from = "UTF-8", to = "UTF-8") check returned NA for invalid
+  # bytes on Windows and Linux but not on macOS.
+  con <- file(file, "rb")
+  on.exit(close(con), add = TRUE)
+  carry <- raw(0)
 
-  # iconv returns NA if input is not valid UTF-8
-  result <- iconv(text, from = "UTF-8", to = "UTF-8")
-
-  if (is.na(result)) {
-    "latin1"
-  } else {
-    "UTF-8"
+  repeat {
+    bytes <- readBin(con, "raw", n = chunk_size)
+    if (length(bytes) == 0L) {
+      return("UTF-8")
+    }
+    bytes <- c(carry, bytes)
+    carry <- raw(0)
+    if (!any(bytes > as.raw(0x7F))) {
+      next
+    }
+    # a chunk that stops before the end of the file may cut a multibyte
+    # character: keep the incomplete tail for the next chunk
+    full <- length(bytes) >= chunk_size
+    if (full) {
+      kept <- drop_incomplete_utf8_tail(bytes)
+      carry <- bytes[seq_along(bytes) > length(kept)]
+      bytes <- kept
+    }
+    bytes <- bytes[bytes != as.raw(0)]
+    return(if (validUTF8(rawToChar(bytes))) "UTF-8" else "latin1")
   }
+}
+
+#' Drop an incomplete UTF-8 sequence at the end of a raw vector
+#'
+#' @description
+#' Internal function. A fixed-size chunk read from a UTF-8 file can cut a
+#' multibyte character. Only a trailing lead byte whose sequence is
+#' incomplete (with its continuation bytes) is dropped, so a latin1 byte
+#' at the end is kept and still makes the chunk invalid.
+#'
+#' @param bytes A raw vector.
+#'
+#' @return The raw vector, possibly shorter.
+#'
+#' @keywords internal
+drop_incomplete_utf8_tail <- function(bytes) {
+  n <- length(bytes)
+  for (i in rev(seq_len(n))[seq_len(min(4L, n))]) {
+    b <- as.integer(bytes[i])
+    if (b < 0x80) {
+      return(bytes)
+    }
+    if (b >= 0xC0) {
+      expected <- if (b >= 0xF0) {
+        4L
+      } else if (b >= 0xE0) {
+        3L
+      } else {
+        2L
+      }
+      if (n - i + 1L < expected) {
+        return(bytes[seq_len(i - 1L)])
+      }
+      return(bytes)
+    }
+  }
+  bytes
+}
+
+#' Fold text to ASCII the same way on every platform
+#'
+#' @description
+#' Internal function used to build column names and to compare sheet
+#' names. `iconv(to = "ASCII//TRANSLIT")` is platform-dependent: macOS
+#' turns "i-acute" into "'i", so names such as "Municipio" (with accent)
+#' came out as `munic_ipio` there. This uses ICU's Latin-ASCII transform
+#' and then reproduces the names educabR already produced on Windows:
+#' ordinal indicators become letters ("N.o" -> "no"), superscript digits
+#' become digits, and Greek letters and sharp s are dropped.
+#'
+#' @param x A character vector.
+#'
+#' @return A character vector.
+#'
+#' @keywords internal
+ascii_fold <- function(x) {
+  # code points keep this file ASCII-only:
+  # 00BA/00AA ordinal o/a, 00B9/00B2/00B3 superscript 1/2/3, 00DF sharp s
+  from <- intToUtf8(c(0xBA, 0xAA, 0xB9, 0xB2, 0xB3))
+  x <- chartr(from, "oa123", x)
+  x <- stringi::stri_replace_all_regex(
+    x,
+    str_c("[\\p{Greek}", intToUtf8(0xDF), "]"),
+    " "
+  )
+  stringi::stri_trans_general(x, "Latin-ASCII")
 }
 
 #' Normalize character columns to UTF-8 NFC
@@ -814,11 +1090,13 @@ normalize_utf8_nfc <- function(df) {
 #' @return A tibble with the data.
 #'
 #' @keywords internal
-read_inep_file <- function(file,
-                           delim = ";",
-                           encoding = NULL,
-                           n_max = Inf,
-                           quiet = FALSE) {
+read_inep_file <- function(
+  file,
+  delim = ";",
+  encoding = NULL,
+  n_max = Inf,
+  quiet = FALSE
+) {
   # detect encoding if not specified
   if (is.null(encoding)) {
     encoding <- detect_encoding(file)
@@ -856,16 +1134,106 @@ read_inep_file <- function(file,
     ))
   }
 
-  # read with readr
-  df <- readr::read_delim(
+  # read with readr; its "parsing issues" warning is muffled because the
+  # columns with problems are re-read just below
+  df <- withCallingHandlers(
+    readr::read_delim(
+      file,
+      delim = delim,
+      locale = readr::locale(encoding = encoding),
+      show_col_types = FALSE,
+      n_max = n_max,
+      col_types = col_spec,
+      progress = TRUE
+    ),
+    warning = function(w) {
+      if (grepl("parsing issues", conditionMessage(w), fixed = TRUE)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+
+  df <- reread_problem_columns(df, file, delim, encoding, n_max)
+
+  normalize_utf8_nfc(df)
+}
+
+#' Re-read columns that readr failed to parse
+#'
+#' @description
+#' Internal helper for [read_inep_file()]. readr guesses each column type
+#' from the first 1,000 rows; a column that is empty there is read as
+#' logical and every later value becomes `NA` (Censo Escolar 1995: 234
+#' values of `VEM2206`, 1997: 567 of `VPE626`). Columns with parsing
+#' problems are read again as text and their type is guessed from all
+#' values. Columns without problems are untouched.
+#'
+#' @param df The tibble returned by `readr::read_delim()`.
+#' @param file,delim,encoding,n_max The arguments of that read.
+#'
+#' @return The tibble with those columns replaced.
+#'
+#' @keywords internal
+reread_problem_columns <- function(df, file, delim, encoding, n_max = Inf) {
+  probs <- readr::problems(df)
+  bad <- if (nrow(probs) > 0L) {
+    unique(names(df)[unique(probs$col)])
+  } else {
+    character()
+  }
+
+  # INEP files have no true logical columns: readr reads answer letters
+  # "T"/"F" as TRUE/FALSE (SAEB 2021 diretor: 17,427 answers "F" became
+  # FALSE). Those columns are re-read and kept as text.
+  as_text <- names(df)[vapply(
+    df,
+    function(x) is.logical(x) && any(!is.na(x)),
+    logical(1)
+  )]
+
+  bad <- unique(c(bad, as_text))
+  bad <- bad[!is.na(bad) & nzchar(bad)]
+  if (length(bad) == 0L) {
+    return(df)
+  }
+
+  fixed <- readr::read_delim(
     file,
     delim = delim,
     locale = readr::locale(encoding = encoding),
-    show_col_types = FALSE,
+    col_select = dplyr::all_of(bad),
+    col_types = readr::cols(.default = readr::col_character()),
     n_max = n_max,
-    col_types = col_spec,
-    progress = TRUE
+    show_col_types = FALSE,
+    progress = FALSE
   )
+  # columns guessed logical: numbers ("0" counts in Censo Escolar 1995-2006,
+  # read as FALSE) become numeric, letters ("F" answers) stay text
+  for (col in as_text) {
+    x <- fixed[[col]]
+    if (all(grepl("^-?[0-9]+([.][0-9]+)?$", trimws(x[!is.na(x)])))) {
+      fixed[[col]] <- as.numeric(x)
+    }
+  }
 
-  normalize_utf8_nfc(df)
+  to_type <- setdiff(bad, as_text)
+  if (length(to_type) > 0L) {
+    text <- fixed
+    fixed[to_type] <- readr::type_convert(
+      fixed[to_type],
+      col_types = readr::cols(.default = readr::col_guess()),
+      locale = readr::locale(encoding = encoding),
+      guess_integer = FALSE
+    )
+    # a column guessed logical again from all values holds letters: text
+    relogical <- to_type[vapply(fixed[to_type], is.logical, logical(1))]
+    for (col in relogical) {
+      fixed[[col]] <- text[[col]]
+    }
+  }
+
+  for (col in bad) {
+    df[[col]] <- fixed[[col]]
+  }
+  df
 }
